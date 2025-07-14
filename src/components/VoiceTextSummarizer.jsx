@@ -22,8 +22,8 @@ const VoiceTextSummarizer = () => {
             recognitionRef.current = new SpeechRecognition();
 
             // 정확도 향상을 위한 설정 (실시간성 주석처리)
-            recognitionRef.current.continuous = false; // 실시간 연속 인식 비활성화
-            recognitionRef.current.interimResults = false; // 중간 결과 비활성화 (최종 결과만)
+            recognitionRef.current.continuous = true;      // 연속 인식
+            recognitionRef.current.interimResults = false; // 중간 결과 무시
             recognitionRef.current.lang = lang;
             recognitionRef.current.maxAlternatives = 1; // 가장 정확한 결과만 사용
 
@@ -39,7 +39,7 @@ const VoiceTextSummarizer = () => {
 
                         // 영어일 때만 신뢰도 체크
                         if (lang.startsWith('en')) {
-                            if (typeof confidence === 'number' && confidence < 0.3) {
+                            if (typeof confidence === 'number' && confidence < 0.9) {
                                 setError(`Speech recognition confidence is low (${(confidence * 100).toFixed(1)}%). Please try again.`);
                             }
                         }
