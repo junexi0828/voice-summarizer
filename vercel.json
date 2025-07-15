@@ -1,0 +1,15 @@
+{
+    "redirects": [
+        {
+            "source": "/",
+            "has": [
+                {
+                    "type": "host",
+                    "value": "www.eieconcierge.com"
+                }
+            ],
+            "destination": "https://eieconcierge.com",
+            "statusCode": 301
+        }
+    ]
+}
