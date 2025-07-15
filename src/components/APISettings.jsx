@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Settings, Eye, EyeOff, Save, Key } from 'lucide-react';
+import { X } from 'lucide-react';
 
 const APISettings = ({ isOpen, onClose, aiServices }) => {
     const [apiKeys, setApiKeys] = useState({});
@@ -87,6 +88,15 @@ const APISettings = ({ isOpen, onClose, aiServices }) => {
         }
     };
 
+    // API 키 삭제 함수
+    const handleDeleteKey = (serviceId) => {
+        setApiKeys(prev => ({
+            ...prev,
+            [serviceId]: ''
+        }));
+        localStorage.removeItem(`${serviceId}_api_key`);
+    };
+
     const handleKeyChange = (serviceId, value) => {
         setApiKeys(prev => ({
             ...prev,
@@ -141,6 +151,16 @@ const APISettings = ({ isOpen, onClose, aiServices }) => {
                                             placeholder={`${service.name} API 키를 입력하세요`}
                                             className="flex-1 p-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                                         />
+                                        {/* 삭제(X) 버튼 */}
+                                        {apiKeys[service.id] && (
+                                            <button
+                                                onClick={() => handleDeleteKey(service.id)}
+                                                className="p-2 text-gray-400 hover:text-red-500"
+                                                title="API 키 삭제"
+                                            >
+                                                <X size={16} />
+                                            </button>
+                                        )}
                                         <button
                                             onClick={() => toggleKeyVisibility(service.id)}
                                             className="p-2 text-gray-500 hover:text-gray-700"
@@ -182,6 +202,11 @@ const APISettings = ({ isOpen, onClose, aiServices }) => {
                             {savedMessage}
                         </div>
                     )}
+
+                    {/* 안내문구 */}
+                    <div className="mt-6 text-xs text-gray-500 text-center">
+                        ⚠️ 입력하신 API 키는 <b>브라우저(로컬)</b>에만 저장되며, 서버로 전송되지 않습니다.
+                    </div>
 
                     <div className="mt-6 flex justify-end gap-3">
                         <button

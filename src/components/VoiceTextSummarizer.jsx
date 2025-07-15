@@ -4,6 +4,7 @@ import { marked } from 'marked';
 import { useAuth } from './AuthProvider';
 import AIServiceManager from './AIServiceManager';
 import APISettings from './APISettings';
+import TextareaAutosize from 'react-textarea-autosize';
 
 const VoiceTextSummarizer = () => {
     const {
@@ -22,6 +23,7 @@ const VoiceTextSummarizer = () => {
     const [lang, setLang] = useState('ko-KR');
     const [showAIServiceSelector, setShowAIServiceSelector] = useState(false);
     const [showAPISettings, setShowAPISettings] = useState(false);
+    const [copyTranscribedSuccess, setCopyTranscribedSuccess] = useState(false);
 
     const recognitionRef = useRef(null);
 
@@ -227,6 +229,17 @@ const VoiceTextSummarizer = () => {
         setTranscribedText(e.target.value);
     };
 
+    // 음성 인식 결과 복사 함수
+    const copyTranscribedToClipboard = async () => {
+        try {
+            await navigator.clipboard.writeText(transcribedText);
+            setCopyTranscribedSuccess(true);
+            setTimeout(() => setCopyTranscribedSuccess(false), 1500);
+        } catch (e) {
+            setError('클립보드 복사에 실패했습니다.');
+        }
+    };
+
     return (
         <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
             <div className="max-w-7xl mx-auto">
@@ -357,17 +370,32 @@ const VoiceTextSummarizer = () => {
                           [텍스트 입력창(음성 인식 결과) 높이/스크롤 설정]
                           - flex-grow: 남은 공간을 모두 차지
                           - min-h-64 : 가변창 최소 높이(16rem, 약 24줄)
-                          - max-h-96 : 가변창 최대 높이(24rem, 약 36줄)
+                          - max-h-[32rem] : 가변창 최대 높이(32rem, 약 48줄)
                           - overflow-y-auto : 최대 높이 초과 시 세로 스크롤 표시
                           - resize-y : 사용자가 세로 크기 조절 가능
                           - mt-4 : 텍스트 입력창 위에 여백 조절
                         */}
-                        <textarea
-                            value={transcribedText}
-                            onChange={handleTextChange}
-                            placeholder="음성을 녹음하거나 직접 텍스트를 입력하세요..."
-                            className="w-full flex-grow min-h-64 max-h-[32rem] p-4 border border-gray-300 rounded-lg resize-y focus:ring-2 focus:ring-blue-500 focus:border-transparent overflow-y-auto"
-                        />
+                        <div className="relative">
+                            {/* 텍스트 입력창 (자동 높이 조절) */}
+                            <TextareaAutosize
+                                value={transcribedText}
+                                onChange={handleTextChange}
+                                placeholder="음성을 녹음하거나 직접 텍스트를 입력하세요..."
+                                minRows={8} // 최소 줄 수
+                                maxRows={24} // 최대 줄 수
+                                className="w-full p-4 border border-gray-300 rounded-lg resize-none focus:ring-2 focus:ring-blue-500 focus:border-transparent overflow-y-auto"
+                            />
+                            <button
+                                onClick={copyTranscribedToClipboard}
+                                className="absolute top-2 right-2 p-2 bg-blue-600 text-white rounded opacity-70 hover:opacity-100 transition-opacity hover:bg-blue-700 transition-colors"
+                                title="복사"
+                            >
+                                <Copy size={16} />
+                            </button>
+                        </div>
+                        {copyTranscribedSuccess && (
+                            <p className="mt-2 text-sm text-green-600">클립보드에 복사되었습니다!</p>
+                        )}
                         <div className="mt-4 flex justify-between items-center flex-shrink-0">
                             <div className="flex gap-2">
                                 <button
@@ -396,7 +424,7 @@ const VoiceTextSummarizer = () => {
                             AI 정리 결과
                         </h2>
                         <div className="relative">
-                            <div className="w-full min-h-64 max-h-[32rem] p-4 border border-gray-300 rounded-lg overflow-y-auto bg-gray-50">
+                            <div className="w-full min-h-64 max-h-[38rem] p-4 border border-gray-300 rounded-lg overflow-y-auto bg-gray-50">
                                 {summarizedText ? (
                                     <div className="prose prose-sm max-w-none prose-gray text-left">
                                         <div dangerouslySetInnerHTML={{ __html: marked(summarizedText) }} />
@@ -408,7 +436,7 @@ const VoiceTextSummarizer = () => {
                             {summarizedText && (
                                 <button
                                     onClick={copyToClipboard}
-                                    className="absolute top-2 right-2 p-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
+                                    className="absolute top-2 right-2 p-2 bg-blue-600 text-white rounded opacity-70 hover:opacity-100 transition-opacity hover:bg-blue-700 transition-colors"
                                 >
                                     <Copy size={16} />
                                 </button>
