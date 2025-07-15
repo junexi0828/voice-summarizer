@@ -1,62 +1,121 @@
-# 🎯 Juns Portfolio
+# AI Voice Summarizer - Chrome Extension
 
-안녕하세요! 저는 **Juns**입니다.
-웹 개발과 AI 기술에 관심이 많은 개발자입니다.
+음성을 텍스트로 변환하고 다양한 AI 서비스로 자동 요약하는 크롬 확장 프로그램입니다.
 
-## 🚀 Projects
+## 🚀 주요 기능
 
-### [AI Voice Text Summarizer](voice-summarizer/)
-- **기술 스택**: React, Tailwind CSS, Web Speech API, Claude AI
-- **기능**: 음성 인식 → 텍스트 변환 → AI 요약
-- **특징**: 실시간 음성 인식, 한국어/영어 지원, Claude AI 연동
-- **링크**: [Live Demo](https://voice-summarizer.vercel.app) | [GitHub](https://github.com/junexi0828/juns/tree/main/voice-summarizer)
+- **음성 인식**: Web Speech API를 사용한 실시간 음성-텍스트 변환
+- **다중 AI 서비스 지원**: Claude, GPT, Groq, Perplexity, Gemini
+- **소셜 로그인**: Google 계정으로 간편 로그인
+- **API 키 관리**: 각 AI 서비스별 API 키 안전한 저장 및 관리
+- **크로스 플랫폼**: 크롬 확장 프로그램으로 어디서든 사용 가능
 
-## 🛠️ Tech Stack
+## 🛠️ 기술 스택
 
-### Frontend
-- **React** - 사용자 인터페이스 구축
-- **Tailwind CSS** - 스타일링 및 반응형 디자인
-- **TypeScript** - 타입 안정성
+- **Frontend**: React 19, Tailwind CSS
+- **음성 인식**: Web Speech API
+- **AI 서비스**: Claude, GPT, Groq, Perplexity, Gemini
+- **인증**: Google OAuth 2.0
+- **스토리지**: Chrome Storage API, localStorage
 
-### AI & APIs
-- **Claude AI** - 텍스트 요약 및 정리
-- **Web Speech API** - 음성 인식
-- **Naver Clova Speech** - 고정확도 음성 인식 (예정)
+## 📦 설치 방법
 
-### Development
-- **Git** - 버전 관리
-- **GitHub** - 코드 저장소
-- **Vercel** - 배포
+### 1. 개발 환경 설정
 
-## 📈 Skills
+```bash
+# 저장소 클론
+git clone https://github.com/your-username/voice-summarizer.git
+cd voice-summarizer
 
-### Programming Languages
-- JavaScript/TypeScript
-- Python
-- HTML/CSS
+# 의존성 설치
+npm install
 
-### Frameworks & Libraries
-- React.js
-- Node.js
-- Express.js
+# 개발 서버 실행
+npm start
+```
 
-### Tools & Platforms
-- Git & GitHub
-- VS Code
-- Vercel
+### 2. 크롬 확장 프로그램 빌드
 
-## 📫 Contact
+```bash
+# 확장 프로그램용 빌드
+npm run build:extension
+```
 
-- **GitHub**: [@junexi0828](https://github.com/junexi0828)
-- **Email**: your.email@example.com
-- **LinkedIn**: [Your LinkedIn]
+### 3. 크롬에 확장 프로그램 설치
 
-## 🎯 Goals
+1. 크롬 브라우저에서 `chrome://extensions/` 접속
+2. 우측 상단의 "개발자 모드" 활성화
+3. "압축해진 확장 프로그램을 로드합니다" 클릭
+4. `build` 폴더 선택
 
-- AI 기술을 활용한 실용적인 웹 애플리케이션 개발
-- 사용자 경험을 중시한 인터페이스 설계
-- 지속적인 학습과 기술 스택 확장
+## 🔧 설정 방법
+
+### 1. Google OAuth 설정
+
+1. [Google Cloud Console](https://console.cloud.google.com/)에서 새 프로젝트 생성
+2. OAuth 2.0 클라이언트 ID 생성
+3. `public/manifest.json`의 `oauth2.client_id`에 클라이언트 ID 입력
+
+### 2. AI 서비스 API 키 설정
+
+1. 확장 프로그램에서 "API 설정" 버튼 클릭
+2. 각 AI 서비스별로 API 키 입력:
+
+#### Claude (Anthropic)
+- [Anthropic Console](https://console.anthropic.com/)에서 API 키 발급
+- `sk-ant-...` 형식의 키 입력
+
+#### GPT (OpenAI)
+- [OpenAI Platform](https://platform.openai.com/)에서 API 키 발급
+- `sk-...` 형식의 키 입력
+
+#### Groq
+- [Groq Console](https://console.groq.com/)에서 API 키 발급
+
+#### Perplexity
+- [Perplexity API](https://www.perplexity.ai/settings/api)에서 API 키 발급
+
+#### Gemini (Google)
+- [Google AI Studio](https://aistudio.google.com/)에서 API 키 발급
+
+## 🎯 사용 방법
+
+1. **로그인**: Google 계정으로 로그인
+2. **AI 서비스 선택**: 사용하고 싶은 AI 서비스 선택
+3. **음성 녹음**: "음성 녹음 시작" 버튼으로 녹음 시작
+4. **AI 정리**: "AI 정리하기" 버튼으로 텍스트 요약
+5. **결과 복사**: 정리된 텍스트를 클립보드에 복사
+
+## 🔒 보안
+
+- API 키는 로컬에 암호화되어 저장됩니다
+- Google OAuth를 통한 안전한 인증
+- 모든 API 호출은 HTTPS를 통해 암호화됩니다
+
+## 🚨 주의사항
+
+- 각 AI 서비스의 사용량 제한과 요금 정책을 확인하세요
+- API 키는 안전하게 보관하고 공유하지 마세요
+- 음성 인식 정확도는 환경과 발음에 따라 달라질 수 있습니다
+
+## 🤝 기여하기
+
+1. Fork the Project
+2. Create your Feature Branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your Changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the Branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
+
+## 📄 라이선스
+
+이 프로젝트는 MIT 라이선스 하에 배포됩니다. 자세한 내용은 `LICENSE` 파일을 참조하세요.
+
+## 📞 문의
+
+프로젝트에 대한 문의사항이 있으시면 이슈를 생성해주세요.
 
 ---
 
-⭐ **Star this repository if you find it helpful!**
+**개발자**: Juns
+**버전**: 1.0.0
+**최종 업데이트**: 2024년 12월
