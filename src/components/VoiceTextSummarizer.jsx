@@ -256,7 +256,7 @@ const VoiceTextSummarizer = () => {
 
                 {/* AI 서비스 선택 및 설정 */}
                 <div className="mb-6 p-4 bg-white rounded-lg shadow-md">
-                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 sm:gap-0">
+                    <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 md:gap-0">
                         <div className="flex items-center gap-3">
                             {selectedAIService ? (
                                 <div className="flex items-center gap-2">
@@ -269,17 +269,17 @@ const VoiceTextSummarizer = () => {
                                 </div>
                             )}
                         </div>
-                        <div className="flex items-center gap-2 sm:gap-3 mt-3 sm:mt-0">
+                        <div className="flex items-center gap-2 md:gap-3 mt-3 md:mt-0">
                             <button
                                 onClick={() => setShowAIServiceSelector(!showAIServiceSelector)}
-                                className="flex items-center gap-2 px-3 py-1.5 sm:px-4 sm:py-2 text-sm sm:text-base bg-blue-600 text-white rounded-lg hover:bg-blue-700 min-w-[100px] sm:min-w-[120px]"
+                                className="flex items-center gap-2 px-3 py-1.5 md:px-4 md:py-2 text-sm md:text-base bg-blue-600 text-white rounded-lg hover:bg-blue-700 min-w-[100px] md:min-w-[120px]"
                             >
                                 <Settings size={16} />
                                 AI 서비스 선택
                             </button>
                             <button
                                 onClick={() => setShowAPISettings(true)}
-                                className="flex items-center gap-2 px-3 py-1.5 sm:px-4 sm:py-2 text-sm sm:text-base bg-gray-600 text-white rounded-lg hover:bg-gray-700 min-w-[100px] sm:min-w-[120px]"
+                                className="flex items-center gap-2 px-3 py-1.5 md:px-4 md:py-2 text-sm md:text-base bg-gray-600 text-white rounded-lg hover:bg-gray-700 min-w-[100px] md:min-w-[120px]"
                             >
                                 <Key size={16} />
                                 API 설정
@@ -326,11 +326,11 @@ const VoiceTextSummarizer = () => {
                 )}
 
                 {/* 컨트롤 버튼들 */}
-                <div className="flex flex-col xs:flex-row justify-center gap-2 xs:gap-4 mb-8">
+                <div className="flex flex-col md:flex-row justify-center gap-2 md:gap-4 mb-8">
                     <button
                         onClick={isRecording ? stopRecording : startRecording}
                         disabled={!isSpeechSupported}
-                        className={`flex items-center gap-2 px-4 py-2 sm:px-6 sm:py-3 text-sm sm:text-base rounded-lg font-medium transition-all ${isRecording
+                        className={`flex items-center gap-2 px-4 py-2 md:px-6 md:py-3 text-sm md:text-base rounded-lg font-medium transition-all ${isRecording
                             ? 'bg-red-600 hover:bg-red-700 text-white'
                             : 'bg-blue-600 hover:bg-blue-700 text-white'
                             } ${!isSpeechSupported ? 'opacity-50 cursor-not-allowed' : ''}`}
@@ -342,7 +342,7 @@ const VoiceTextSummarizer = () => {
                     <button
                         onClick={processWithAI}
                         disabled={!selectedAIService || !transcribedText.trim() || isProcessing}
-                        className="flex items-center gap-2 px-4 py-2 sm:px-6 sm:py-3 text-sm sm:text-base bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="flex items-center gap-2 px-4 py-2 md:px-6 md:py-3 text-sm md:text-base bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                         {isProcessing ? <Loader2 className="animate-spin" size={18} /> : <FileText size={18} />}
                         {isProcessing ? '처리 중...' : 'AI 정리하기'}
@@ -350,7 +350,7 @@ const VoiceTextSummarizer = () => {
 
                     <button
                         onClick={resetAll}
-                        className="flex items-center gap-2 px-4 py-2 sm:px-6 sm:py-3 text-sm sm:text-base bg-gray-600 hover:bg-gray-700 text-white rounded-lg font-medium transition-all"
+                        className="flex items-center gap-2 px-4 py-2 md:px-6 md:py-3 text-sm md:text-base bg-gray-600 hover:bg-gray-700 text-white rounded-lg font-medium transition-all"
                     >
                         <RotateCcw size={18} />
                         초기화
