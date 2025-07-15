@@ -6,16 +6,15 @@
 
 - **음성 인식**: Web Speech API를 사용한 실시간 음성-텍스트 변환
 - **다중 AI 서비스 지원**: Claude, GPT, Groq, Perplexity, Gemini
-- **소셜 로그인**: Google 계정으로 간편 로그인
 - **API 키 관리**: 각 AI 서비스별 API 키 안전한 저장 및 관리
 - **크로스 플랫폼**: 크롬 확장 프로그램으로 어디서든 사용 가능
+- **단순한 UX**: 로그인 없이 바로 사용 가능
 
 ## 🛠️ 기술 스택
 
 - **Frontend**: React 19, Tailwind CSS
 - **음성 인식**: Web Speech API
 - **AI 서비스**: Claude, GPT, Groq, Perplexity, Gemini
-- **인증**: Google OAuth 2.0
 - **스토리지**: Chrome Storage API, localStorage
 
 ## 📦 설치 방법
@@ -24,7 +23,7 @@
 
 ```bash
 # 저장소 클론
-git clone https://github.com/your-username/voice-summarizer.git
+git clone https://github.com/junexi0828/voice-summarizer.git
 cd voice-summarizer
 
 # 의존성 설치
@@ -50,13 +49,7 @@ npm run build:extension
 
 ## 🔧 설정 방법
 
-### 1. Google OAuth 설정
-
-1. [Google Cloud Console](https://console.cloud.google.com/)에서 새 프로젝트 생성
-2. OAuth 2.0 클라이언트 ID 생성
-3. `public/manifest.json`의 `oauth2.client_id`에 클라이언트 ID 입력
-
-### 2. AI 서비스 API 키 설정
+### AI 서비스 API 키 설정
 
 1. 확장 프로그램에서 "API 설정" 버튼 클릭
 2. 각 AI 서비스별로 API 키 입력:
@@ -80,17 +73,17 @@ npm run build:extension
 
 ## 🎯 사용 방법
 
-1. **로그인**: Google 계정으로 로그인
-2. **AI 서비스 선택**: 사용하고 싶은 AI 서비스 선택
+1. **AI 서비스 선택**: 사용하고 싶은 AI 서비스 선택
+2. **API 키 입력**: "API 설정"에서 해당 서비스의 API 키 입력
 3. **음성 녹음**: "음성 녹음 시작" 버튼으로 녹음 시작
 4. **AI 정리**: "AI 정리하기" 버튼으로 텍스트 요약
 5. **결과 복사**: 정리된 텍스트를 클립보드에 복사
 
 ## 🔒 보안
 
-- API 키는 로컬에 암호화되어 저장됩니다
-- Google OAuth를 통한 안전한 인증
+- API 키는 로컬에 안전하게 저장됩니다
 - 모든 API 호출은 HTTPS를 통해 암호화됩니다
+- 사용자 인증 없이 바로 사용 가능
 
 ## 🚨 주의사항
 

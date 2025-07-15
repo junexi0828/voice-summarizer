@@ -2,11 +2,9 @@
   "manifest_version": 3,
   "name": "AI Voice Summarizer",
   "version": "1.0.0",
-  "description": "음성을 텍스트로 변환하고 AI로 요약하는 크롬 확장 프로그램",
+  "description": "음성을 텍스트로 변환하고 AI로 자동 정리하는 크롬 확장 프로그램",
   "permissions": [
-    "storage",
-    "identity",
-    "tabs"
+    "storage"
   ],
   "host_permissions": [
     "https://api.anthropic.com/*",
@@ -24,12 +22,5 @@
   },
   "content_security_policy": {
     "extension_pages": "script-src 'self'; object-src 'self'"
-  },
-  "oauth2": {
-    "client_id": "YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com",
-    "scopes": [
-      "https://www.googleapis.com/auth/userinfo.email",
-      "https://www.googleapis.com/auth/userinfo.profile"
-    ]
   }
 }

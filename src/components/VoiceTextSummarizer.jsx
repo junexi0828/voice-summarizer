@@ -1,18 +1,14 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Mic, MicOff, FileText, Copy, RotateCcw, Volume2, Loader2, LogIn, LogOut, Settings, Key } from 'lucide-react';
+import { Mic, MicOff, FileText, Copy, RotateCcw, Volume2, Loader2, Settings, Key } from 'lucide-react';
 import { useAuth } from './AuthProvider';
 import AIServiceManager from './AIServiceManager';
 import APISettings from './APISettings';
 
 const VoiceTextSummarizer = () => {
     const {
-        user,
-        signInWithGoogle,
-        signOut,
         selectedAIService,
         selectAIService,
-        aiServices,
-        isChromeExtension
+        aiServices
     } = useAuth();
 
     const [isRecording, setIsRecording] = useState(false);
@@ -67,7 +63,29 @@ const VoiceTextSummarizer = () => {
             };
 
             recognitionRef.current.onerror = (event) => {
-                setError(`음성 인식 오류: ${event.error}`);
+                let errorMessage = '';
+
+                switch (event.error) {
+                    case 'not-allowed':
+                        errorMessage = '마이크 권한이 거부되었습니다. 브라우저 설정에서 마이크 권한을 허용해주세요.';
+                        break;
+                    case 'no-speech':
+                        errorMessage = '음성이 감지되지 않았습니다. 마이크가 정상적으로 작동하는지 확인하고 다시 시도해주세요.';
+                        break;
+                    case 'audio-capture':
+                        errorMessage = '마이크에 접근할 수 없습니다. 다른 애플리케이션이 마이크를 사용 중인지 확인해주세요.';
+                        break;
+                    case 'network':
+                        errorMessage = '네트워크 오류가 발생했습니다. 인터넷 연결을 확인하고 다시 시도해주세요.';
+                        break;
+                    case 'service-not-allowed':
+                        errorMessage = '음성 인식 서비스에 접근할 수 없습니다. 잠시 후 다시 시도해주세요.';
+                        break;
+                    default:
+                        errorMessage = `음성 인식 오류: ${event.error}`;
+                }
+
+                setError(errorMessage);
                 setIsRecording(false);
             };
 
@@ -79,11 +97,11 @@ const VoiceTextSummarizer = () => {
 
     const startRecording = () => {
         if (!isSpeechSupported) {
-            setError('이 브라우저에서는 음성 인식이 지원되지 않습니다.');
+            setError('이 브라우저에서는 음성 인식이 지원되지 않습니다. Chrome, Edge, Safari 등의 최신 브라우저를 사용해주세요.');
             return;
         }
         if (isRecording) {
-            setError('이미 녹음이 진행 중입니다.');
+            setError('이미 녹음이 진행 중입니다. 녹음을 중지한 후 다시 시작해주세요.');
             return;
         }
         setError('');
@@ -98,18 +116,15 @@ const VoiceTextSummarizer = () => {
     };
 
     const processWithAI = async () => {
-        if (!user) {
-            setError('AI 서비스를 사용하려면 먼저 로그인해주세요.');
-            return;
-        }
-
+        // AI 서비스 선택 확인
         if (!selectedAIService) {
-            setError('AI 서비스를 선택해주세요.');
+            setError('AI 서비스를 선택해주세요. "AI 서비스 선택" 버튼을 클릭하여 원하는 AI 서비스를 선택하세요.');
             return;
         }
 
+        // 텍스트 입력 확인
         if (!transcribedText.trim()) {
-            setError('정리할 텍스트가 없습니다.');
+            setError('정리할 텍스트가 없습니다. 음성을 녹음하거나 텍스트를 직접 입력해주세요.');
             return;
         }
 
@@ -117,12 +132,17 @@ const VoiceTextSummarizer = () => {
         setError('');
 
         try {
-            // 사용자의 API 토큰을 가져오는 로직
-            // 실제 구현에서는 사용자가 각 AI 서비스의 API 키를 입력하도록 해야 합니다
+            // API 키 확인
             const userToken = await getUserToken(selectedAIService.id);
 
             if (!userToken) {
-                setError(`${selectedAIService.name} API 키가 필요합니다. 설정에서 API 키를 입력해주세요.`);
+                setError(`${selectedAIService.name} API 키가 필요합니다. "API 설정" 버튼을 클릭하여 API 키를 입력해주세요.`);
+                return;
+            }
+
+            // API 키 형식 검증
+            if (!isValidAPIKey(selectedAIService.id, userToken)) {
+                setError(`${selectedAIService.name} API 키 형식이 올바르지 않습니다. 올바른 API 키를 입력해주세요.`);
                 return;
             }
 
@@ -134,9 +154,48 @@ const VoiceTextSummarizer = () => {
 
             setSummarizedText(result);
         } catch (error) {
-            setError(`${selectedAIService.name} API 호출 오류: ${error.message}`);
+            // 구체적인 에러 메시지 처리
+            let errorMessage = '';
+
+            if (error.message.includes('401') || error.message.includes('Unauthorized')) {
+                errorMessage = `${selectedAIService.name} API 키가 유효하지 않습니다. 올바른 API 키를 입력해주세요.`;
+            } else if (error.message.includes('429') || error.message.includes('Rate limit')) {
+                errorMessage = `${selectedAIService.name} API 사용량 제한에 도달했습니다. 잠시 후 다시 시도해주세요.`;
+            } else if (error.message.includes('500') || error.message.includes('Internal server error')) {
+                errorMessage = `${selectedAIService.name} 서버 오류가 발생했습니다. 잠시 후 다시 시도해주세요.`;
+            } else if (error.message.includes('Network') || error.message.includes('fetch')) {
+                errorMessage = '네트워크 연결을 확인해주세요. 인터넷 연결 상태를 점검하고 다시 시도해주세요.';
+            } else {
+                errorMessage = `${selectedAIService.name} API 호출 오류: ${error.message}`;
+            }
+
+            setError(errorMessage);
         } finally {
             setIsProcessing(false);
+        }
+    };
+
+    // API 키 형식 검증 함수
+    const isValidAPIKey = (serviceId, apiKey) => {
+        if (!apiKey || typeof apiKey !== 'string') return false;
+
+        const trimmedKey = apiKey.trim();
+        if (trimmedKey.length === 0) return false;
+
+        // 서비스별 API 키 형식 검증
+        switch (serviceId) {
+            case 'claude':
+                return trimmedKey.startsWith('sk-ant-');
+            case 'gpt':
+                return trimmedKey.startsWith('sk-');
+            case 'groq':
+                return trimmedKey.startsWith('gsk_');
+            case 'perplexity':
+                return trimmedKey.startsWith('pplx-');
+            case 'gemini':
+                return trimmedKey.length > 20; // Google API 키는 일반적으로 길이가 김
+            default:
+                return trimmedKey.length > 10; // 기본 검증
         }
     };
 
@@ -152,7 +211,7 @@ const VoiceTextSummarizer = () => {
             setCopySuccess(true);
             setTimeout(() => setCopySuccess(false), 2000);
         } catch (err) {
-            setError('클립보드 복사에 실패했습니다.');
+            setError('클립보드 복사에 실패했습니다. 브라우저에서 클립보드 권한을 허용해주세요.');
         }
     };
 
@@ -166,17 +225,6 @@ const VoiceTextSummarizer = () => {
     const handleTextChange = (e) => {
         setTranscribedText(e.target.value);
     };
-
-    const handleLogin = async () => {
-        try {
-            await signInWithGoogle();
-        } catch (error) {
-            setError('로그인에 실패했습니다: ' + error.message);
-        }
-    };
-
-    // 개발 환경에서는 Chrome API 관련 기능 비활성화
-    const isDevelopment = !isChromeExtension;
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
@@ -192,69 +240,39 @@ const VoiceTextSummarizer = () => {
                     </p>
                 </div>
 
-                {/* 로그인 상태 및 AI 서비스 선택 */}
+                {/* AI 서비스 선택 및 설정 */}
                 <div className="mb-6 p-4 bg-white rounded-lg shadow-md">
-                    {user ? (
-                        <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-3">
-                                <img
-                                    src={user.picture}
-                                    alt={user.name}
-                                    className="w-10 h-10 rounded-full"
-                                />
-                                <div>
-                                    <p className="font-medium text-gray-800">{user.name}</p>
-                                    <p className="text-sm text-gray-600">{user.email}</p>
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                            {selectedAIService ? (
+                                <div className="flex items-center gap-2">
+                                    <span className="text-2xl">{selectedAIService.icon}</span>
+                                    <span className="font-medium">{selectedAIService.name}</span>
                                 </div>
-                            </div>
-                            <div className="flex items-center gap-3">
-                                {selectedAIService ? (
-                                    <div className="flex items-center gap-2">
-                                        <span className="text-2xl">{selectedAIService.icon}</span>
-                                        <span className="font-medium">{selectedAIService.name}</span>
-                                    </div>
-                                ) : (
-                                    <button
-                                        onClick={() => setShowAIServiceSelector(!showAIServiceSelector)}
-                                        className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-                                    >
-                                        <Settings size={16} />
-                                        AI 서비스 선택
-                                    </button>
-                                )}
-                                <button
-                                    onClick={() => setShowAPISettings(true)}
-                                    className="flex items-center gap-2 px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700"
-                                >
-                                    <Key size={16} />
-                                    API 설정
-                                </button>
-                                <button
-                                    onClick={signOut}
-                                    className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
-                                >
-                                    <LogOut size={16} />
-                                    로그아웃
-                                </button>
-                                {isDevelopment && (
-                                    <span className="text-xs text-orange-600 bg-orange-100 px-2 py-1 rounded">
-                                        개발 모드
-                                    </span>
-                                )}
-                            </div>
+                            ) : (
+                                <div className="text-gray-600">
+                                    AI 서비스를 선택해주세요
+                                </div>
+                            )}
                         </div>
-                    ) : (
-                        <div className="text-center">
-                            <p className="text-gray-600 mb-4">AI 서비스를 사용하려면 로그인해주세요</p>
+                        <div className="flex items-center gap-3">
                             <button
-                                onClick={handleLogin}
-                                className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 mx-auto"
+                                onClick={() => setShowAIServiceSelector(!showAIServiceSelector)}
+                                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
                             >
-                                <LogIn size={20} />
-                                Google로 로그인
+                                <Settings size={16} />
+                                AI 서비스 선택
                             </button>
+                            <button
+                                onClick={() => setShowAPISettings(true)}
+                                className="flex items-center gap-2 px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700"
+                            >
+                                <Key size={16} />
+                                API 설정
+                            </button>
+
                         </div>
-                    )}
+                    </div>
                 </div>
 
                 {/* AI 서비스 선택 모달 */}
@@ -310,7 +328,7 @@ const VoiceTextSummarizer = () => {
 
                     <button
                         onClick={processWithAI}
-                        disabled={!user || !selectedAIService || !transcribedText.trim() || isProcessing}
+                        disabled={!selectedAIService || !transcribedText.trim() || isProcessing}
                         className="flex items-center gap-2 px-6 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                         {isProcessing ? <Loader2 className="animate-spin" size={20} /> : <FileText size={20} />}

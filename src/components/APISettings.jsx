@@ -5,6 +5,7 @@ const APISettings = ({ isOpen, onClose, aiServices }) => {
     const [apiKeys, setApiKeys] = useState({});
     const [showKeys, setShowKeys] = useState({});
     const [savedMessage, setSavedMessage] = useState('');
+    const [validationErrors, setValidationErrors] = useState({});
 
     useEffect(() => {
         // 저장된 API 키 불러오기
@@ -19,6 +20,19 @@ const APISettings = ({ isOpen, onClose, aiServices }) => {
     }, [aiServices]);
 
     const handleSave = () => {
+        // API 키 유효성 검증
+        const errors = {};
+        Object.entries(apiKeys).forEach(([serviceId, key]) => {
+            if (key.trim() && !isValidAPIKey(serviceId, key.trim())) {
+                errors[serviceId] = getValidationMessage(serviceId);
+            }
+        });
+
+        if (Object.keys(errors).length > 0) {
+            setValidationErrors(errors);
+            return;
+        }
+
         // API 키들을 localStorage에 저장
         Object.entries(apiKeys).forEach(([serviceId, key]) => {
             if (key.trim()) {
@@ -26,8 +40,51 @@ const APISettings = ({ isOpen, onClose, aiServices }) => {
             }
         });
 
+        setValidationErrors({});
         setSavedMessage('API 키가 저장되었습니다!');
         setTimeout(() => setSavedMessage(''), 3000);
+    };
+
+    // API 키 형식 검증 함수
+    const isValidAPIKey = (serviceId, apiKey) => {
+        if (!apiKey || typeof apiKey !== 'string') return false;
+
+        const trimmedKey = apiKey.trim();
+        if (trimmedKey.length === 0) return false;
+
+        // 서비스별 API 키 형식 검증
+        switch (serviceId) {
+            case 'claude':
+                return trimmedKey.startsWith('sk-ant-');
+            case 'gpt':
+                return trimmedKey.startsWith('sk-');
+            case 'groq':
+                return trimmedKey.startsWith('gsk_');
+            case 'perplexity':
+                return trimmedKey.startsWith('pplx-');
+            case 'gemini':
+                return trimmedKey.length > 20; // Google API 키는 일반적으로 길이가 김
+            default:
+                return trimmedKey.length > 10; // 기본 검증
+        }
+    };
+
+    // 검증 메시지 함수
+    const getValidationMessage = (serviceId) => {
+        switch (serviceId) {
+            case 'claude':
+                return 'Claude API 키는 "sk-ant-"로 시작해야 합니다.';
+            case 'gpt':
+                return 'GPT API 키는 "sk-"로 시작해야 합니다.';
+            case 'groq':
+                return 'Groq API 키는 "gsk_"로 시작해야 합니다.';
+            case 'perplexity':
+                return 'Perplexity API 키는 "pplx-"로 시작해야 합니다.';
+            case 'gemini':
+                return 'Gemini API 키는 20자 이상이어야 합니다.';
+            default:
+                return 'API 키 형식이 올바르지 않습니다.';
+        }
     };
 
     const handleKeyChange = (serviceId, value) => {
@@ -92,21 +149,27 @@ const APISettings = ({ isOpen, onClose, aiServices }) => {
                                         </button>
                                     </div>
 
-                                    <div className="mt-2 text-xs text-gray-500">
-                                        {service.id === 'claude' && (
-                                            <p>• Anthropic Console에서 API 키를 발급받으세요</p>
-                                        )}
-                                        {service.id === 'gpt' && (
-                                            <p>• OpenAI Platform에서 API 키를 발급받으세요</p>
-                                        )}
-                                        {service.id === 'groq' && (
-                                            <p>• Groq Console에서 API 키를 발급받으세요</p>
-                                        )}
-                                        {service.id === 'perplexity' && (
-                                            <p>• Perplexity API에서 API 키를 발급받으세요</p>
-                                        )}
-                                        {service.id === 'gemini' && (
-                                            <p>• Google AI Studio에서 API 키를 발급받으세요</p>
+                                    <div className="mt-2 text-xs">
+                                        {validationErrors[service.id] ? (
+                                            <p className="text-red-500">⚠️ {validationErrors[service.id]}</p>
+                                        ) : (
+                                            <div className="text-gray-500">
+                                                {service.id === 'claude' && (
+                                                    <p>• Anthropic Console에서 API 키를 발급받으세요</p>
+                                                )}
+                                                {service.id === 'gpt' && (
+                                                    <p>• OpenAI Platform에서 API 키를 발급받으세요</p>
+                                                )}
+                                                {service.id === 'groq' && (
+                                                    <p>• Groq Console에서 API 키를 발급받으세요</p>
+                                                )}
+                                                {service.id === 'perplexity' && (
+                                                    <p>• Perplexity API에서 API 키를 발급받으세요</p>
+                                                )}
+                                                {service.id === 'gemini' && (
+                                                    <p>• Google AI Studio에서 API 키를 발급받으세요</p>
+                                                )}
+                                            </div>
                                         )}
                                     </div>
                                 </div>
