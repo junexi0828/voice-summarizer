@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Mic, MicOff, FileText, Copy, RotateCcw, Volume2, Loader2, Settings, Key } from 'lucide-react';
+import { marked } from 'marked';
 import { useAuth } from './AuthProvider';
 import AIServiceManager from './AIServiceManager';
 import APISettings from './APISettings';
@@ -388,8 +389,8 @@ const VoiceTextSummarizer = () => {
                         <div className="relative">
                             <div className="w-full h-64 p-4 border border-gray-300 rounded-lg overflow-y-auto bg-gray-50">
                                 {summarizedText ? (
-                                    <div className="prose prose-sm max-w-none">
-                                        <div dangerouslySetInnerHTML={{ __html: summarizedText.replace(/\n/g, '<br>') }} />
+                                    <div className="prose prose-sm max-w-none prose-gray">
+                                        <div dangerouslySetInnerHTML={{ __html: marked(summarizedText) }} />
                                     </div>
                                 ) : (
                                     <p className="text-gray-500">AI 정리 결과가 여기에 표시됩니다...</p>

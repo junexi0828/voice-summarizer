@@ -34,7 +34,7 @@ class AIServiceManager {
             },
             gemini: {
                 name: 'Gemini',
-                baseUrl: 'https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent',
+                baseUrl: 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent',
                 headers: {
                     'content-type': 'application/json',
                 }
@@ -81,25 +81,26 @@ class AIServiceManager {
     }
 
     createPrompt(text) {
-        return `당신은 AI 요약 도우미입니다.
-아래 텍스트는 사용자가 말한 음성을 실시간으로 텍스트로 변환한 것입니다.
-구어체 표현, 말버릇, 반복, 문장 부정확성 등이 포함되어 있을 수 있습니다.
-이 텍스트를 아래 조건에 맞게 정리하고 요약해 주세요:
+        return `당신은 텍스트 정리 및 요약 전문가입니다.
 
-1. 핵심 내용을 놓치지 말고 최대한 **간결하고 명확하게 요약**해 주세요.
-2. **불필요한 말버릇**(예: 음…, 어…, 그러니까…, 뭐랄까…)은 제거해 주세요.
-3. 의미가 중복되거나, 불명확한 문장은 **보완하거나 삭제**해 주세요.
-4. 일정, 할 일, 정보, 주요 의견 등은 **리스트 형식**으로 정리해 주세요.
-5. 전체 결과는 **Markdown 형식**으로 출력해 주세요.
-6. **요약문이 아닌 "정리된 원문" 느낌으로 재구성해도 좋습니다.**
+아래는 사용자가 음성으로 입력한 텍스트입니다. 구어체, 말버릇, 반복, 부정확한 문장이 포함되어 있을 수 있습니다.
+
+**아래 조건에 따라 텍스트를 정리해 주세요:**
+1. 핵심 내용을 놓치지 말고 간결하고 명확하게 요약해 주세요.
+2. 불필요한 말버릇(예: 음…, 어…, 그러니까…, 뭐랄까…)은 제거해 주세요.
+3. 의미가 중복되거나 불명확한 문장은 보완하거나 삭제해 주세요.
+4. 일정, 할 일, 정보, 주요 의견 등은 리스트 형식으로 정리해 주세요.
+5. 필요하다면 Mermaid, Graphviz, Markdown 등 텍스트 기반 다이어그램/문서 언어를 자유롭게 활용해 표, 도식, 플로우차트 등을 생성해 주세요.
+6. 결과는 자연스러운 일반 텍스트로 출력해 주세요. (불필요한 코드블록, 마크다운 감싸기 없이)
+7. 요약문이 아닌 “정리된 원문” 느낌으로 재구성해도 좋습니다.
 
 ---
-🗣️ **사용자 음성 인식 텍스트 원문**:
+🗣️ 사용자 음성 인식 텍스트 원문:
 """
 ${text}
 """
 
-위 텍스트를 조건에 맞게 정리해서 Markdown 형식으로 출력해 주세요.`;
+위 조건에 맞게 정리해 주세요.`;
     }
 
     async callClaudeAPI(prompt, userToken) {
@@ -193,7 +194,10 @@ ${text}
     async callGeminiAPI(prompt, userToken) {
         const response = await fetch(`${this.services.gemini.baseUrl}?key=${userToken}`, {
             method: 'POST',
-            headers: this.services.gemini.headers,
+            headers: {
+                ...this.services.gemini.headers,
+                'X-goog-api-key': userToken
+            },
             body: JSON.stringify({
                 contents: [{
                     parts: [{
@@ -204,7 +208,8 @@ ${text}
         });
 
         if (!response.ok) {
-            throw new Error(`Gemini API 오류: ${response.status}`);
+            const errorText = await response.text();
+            throw new Error(`Gemini API 오류: ${response.status} - ${errorText}`);
         }
 
         const data = await response.json();
