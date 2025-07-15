@@ -348,18 +348,27 @@ const VoiceTextSummarizer = () => {
                 {/* 메인 컨텐츠 영역 */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     {/* 음성 인식 결과 */}
-                    <div className="bg-white rounded-lg shadow-md p-6">
+                    <div className="bg-white rounded-lg shadow-md p-6 flex flex-col h-full">
                         <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
                             <Mic className="text-blue-600" size={24} />
                             음성 인식 결과
                         </h2>
+                        {/*
+                          [텍스트 입력창(음성 인식 결과) 높이/스크롤 설정]
+                          - flex-grow: 남은 공간을 모두 차지
+                          - min-h-64 : 가변창 최소 높이(16rem, 약 24줄)
+                          - max-h-96 : 가변창 최대 높이(24rem, 약 36줄)
+                          - overflow-y-auto : 최대 높이 초과 시 세로 스크롤 표시
+                          - resize-y : 사용자가 세로 크기 조절 가능
+                          - mt-4 : 텍스트 입력창 위에 여백 조절
+                        */}
                         <textarea
                             value={transcribedText}
                             onChange={handleTextChange}
                             placeholder="음성을 녹음하거나 직접 텍스트를 입력하세요..."
-                            className="w-full h-64 p-4 border border-gray-300 rounded-lg resize-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            className="w-full flex-grow min-h-64 max-h-[32rem] p-4 border border-gray-300 rounded-lg resize-y focus:ring-2 focus:ring-blue-500 focus:border-transparent overflow-y-auto"
                         />
-                        <div className="mt-4 flex justify-between items-center">
+                        <div className="mt-4 flex justify-between items-center flex-shrink-0">
                             <div className="flex gap-2">
                                 <button
                                     onClick={() => setLang('ko-KR')}
@@ -387,9 +396,9 @@ const VoiceTextSummarizer = () => {
                             AI 정리 결과
                         </h2>
                         <div className="relative">
-                            <div className="w-full h-64 p-4 border border-gray-300 rounded-lg overflow-y-auto bg-gray-50">
+                            <div className="w-full min-h-64 max-h-[32rem] p-4 border border-gray-300 rounded-lg overflow-y-auto bg-gray-50">
                                 {summarizedText ? (
-                                    <div className="prose prose-sm max-w-none prose-gray">
+                                    <div className="prose prose-sm max-w-none prose-gray text-left">
                                         <div dangerouslySetInnerHTML={{ __html: marked(summarizedText) }} />
                                     </div>
                                 ) : (
