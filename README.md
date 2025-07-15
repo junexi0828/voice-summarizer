@@ -1,70 +1,62 @@
-# Getting Started with Create React App
+# 🎯 Juns Portfolio
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+안녕하세요! 저는 **Juns**입니다.
+웹 개발과 AI 기술에 관심이 많은 개발자입니다.
 
-## Available Scripts
+## 🚀 Projects
 
-In the project directory, you can run:
+### [AI Voice Text Summarizer](voice-summarizer/)
+- **기술 스택**: React, Tailwind CSS, Web Speech API, Claude AI
+- **기능**: 음성 인식 → 텍스트 변환 → AI 요약
+- **특징**: 실시간 음성 인식, 한국어/영어 지원, Claude AI 연동
+- **링크**: [Live Demo](https://voice-summarizer.vercel.app) | [GitHub](https://github.com/junexi0828/juns/tree/main/voice-summarizer)
 
-### `npm start`
+## 🛠️ Tech Stack
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+### Frontend
+- **React** - 사용자 인터페이스 구축
+- **Tailwind CSS** - 스타일링 및 반응형 디자인
+- **TypeScript** - 타입 안정성
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+### AI & APIs
+- **Claude AI** - 텍스트 요약 및 정리
+- **Web Speech API** - 음성 인식
+- **Naver Clova Speech** - 고정확도 음성 인식 (예정)
 
-### `npm test`
+### Development
+- **Git** - 버전 관리
+- **GitHub** - 코드 저장소
+- **Vercel** - 배포
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+## 📈 Skills
 
-### `npm run build`
+### Programming Languages
+- JavaScript/TypeScript
+- Python
+- HTML/CSS
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+### Frameworks & Libraries
+- React.js
+- Node.js
+- Express.js
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+### Tools & Platforms
+- Git & GitHub
+- VS Code
+- Vercel
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+## 📫 Contact
 
-### `npm run eject`
+- **GitHub**: [@junexi0828](https://github.com/junexi0828)
+- **Email**: your.email@example.com
+- **LinkedIn**: [Your LinkedIn]
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+## 🎯 Goals
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+- AI 기술을 활용한 실용적인 웹 애플리케이션 개발
+- 사용자 경험을 중시한 인터페이스 설계
+- 지속적인 학습과 기술 스택 확장
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
+---
 
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
-
-## Learn More
-
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
-
-To learn React, check out the [React documentation](https://reactjs.org/).
-
-### Code Splitting
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
-
-### Analyzing the Bundle Size
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
-
-### Making a Progressive Web App
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
-
-### Advanced Configuration
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
-
-### Deployment
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
-
-### `npm run build` fails to minify
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+⭐ **Star this repository if you find it helpful!**
