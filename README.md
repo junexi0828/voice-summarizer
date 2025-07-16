@@ -115,7 +115,7 @@ Contact: junexi0828@gmail.com
 
 - **Email**: [junexi0828@gmail.com](mailto:junexi0828@gmail.com)
 - **GitHub**: [junexi0828](https://github.com/junexi0828)
-- **Blog**: [junexi0828.log](https://junexi0828.log)
+- **Blog**: [junexi0828.log](https://velog.io/@junexi0828/)
 - **Homepage**: [https://eieconcierge.com/](https://eieconcierge.com/)
 
 ---
