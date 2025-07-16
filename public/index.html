@@ -57,6 +57,38 @@
 
   <!-- Web App Manifest -->
   <link rel="manifest" href="%PUBLIC_URL%/site.webmanifest" />
+
+  <!-- Structured Data for Google Search -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    "url": "https://eieconcierge.com",
+    "logo": "https://eieconcierge.com/apple-touch-icon.png",
+    "name": "EIE",
+    "description": "AI 음성 텍스트 정리 도구 - 음성을 텍스트로 변환하고 AI로 자동 정리",
+    "sameAs": [
+      "https://github.com/junexi0828"
+    ]
+  }
+  </script>
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebApplication",
+    "name": "AI 음성 텍스트 정리 도구",
+    "description": "음성을 텍스트로 변환하고 Claude, GPT, Gemini, Groq, Perplexity 등 다양한 AI로 자동 요약해주는 무료 웹 도구",
+    "url": "https://eieconcierge.com",
+    "applicationCategory": "ProductivityApplication",
+    "operatingSystem": "Web Browser",
+    "offers": {
+      "@type": "Offer",
+      "price": "0",
+      "priceCurrency": "KRW"
+    }
+  }
+  </script>
   <!--
       manifest.json provides metadata used when your web app is installed on a
       user's mobile device or desktop. See https://developers.google.com/web/fundamentals/web-app-manifest/
