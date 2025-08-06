@@ -1291,7 +1291,7 @@ app.get("/api/settings/block-history", (req, res) => {
 app.post("/api/settings/api-keys", (req, res) => {
   try {
     const { apiKeys } = req.body;
-    
+
     // API 키 유효성 검증
     const validationErrors = {};
     if (apiKeys && typeof apiKeys === "object") {
@@ -1314,7 +1314,10 @@ app.post("/api/settings/api-keys", (req, res) => {
     userSettings.apiKeys = apiKeys || {};
     saveUserSettings();
 
-    log("INFO", `API 키 설정 저장 완료 (${Object.keys(apiKeys || {}).length}개 서비스)`);
+    log(
+      "INFO",
+      `API 키 설정 저장 완료 (${Object.keys(apiKeys || {}).length}개 서비스)`
+    );
 
     res.json({
       success: true,
