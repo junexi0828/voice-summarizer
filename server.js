@@ -1,6 +1,6 @@
 const express = require("express");
 const cors = require("cors");
-const { exec } = require("child_process");
+const { exec, execSync } = require("child_process");
 const fs = require("fs");
 const path = require("path");
 const { PythonShell } = require("python-shell");
@@ -581,18 +581,21 @@ function blockWebsites() {
       .readFileSync(CONFIG.system_paths.hosts_file, "utf8")
       .split("\n");
 
-    // VoiceSummarizer 블록 시작/끝 마커
-    const blockStart = "# VoiceSummarizer Block Start";
-    const blockEnd = "# VoiceSummarizer Block End";
+    // VoiceSummarizer 블록 시작/끝 마커 (기존 FocusTimer 마커도 처리)
+    const blockStarts = [
+      "# VoiceSummarizer Block Start",
+      "# FocusTimer Block Start",
+    ];
+    const blockEnds = ["# VoiceSummarizer Block End", "# FocusTimer Block End"];
 
-    // 기존 블록 제거
+    // 기존 블록 제거 (FocusTimer와 VoiceSummarizer 모두 처리)
     let startIdx = -1;
     let endIdx = -1;
 
     for (let i = 0; i < lines.length; i++) {
-      if (lines[i].includes(blockStart)) {
+      if (blockStarts.some((start) => lines[i].includes(start))) {
         startIdx = i;
-      } else if (lines[i].includes(blockEnd)) {
+      } else if (blockEnds.some((end) => lines[i].includes(end))) {
         endIdx = i;
         break;
       }
@@ -603,7 +606,7 @@ function blockWebsites() {
     }
 
     // 새로운 차단 설정 추가
-    lines.push(blockStart);
+    lines.push(blockStarts[0]);
 
     // 모든 카테고리의 웹사이트를 차단
     Object.values(CONFIG.blocked_websites).forEach((category) => {
@@ -612,7 +615,7 @@ function blockWebsites() {
       });
     });
 
-    lines.push(blockEnd);
+    lines.push(blockEnds[0]);
 
     // 임시 파일에 쓰기
     const tempFile = path.join(
@@ -623,7 +626,6 @@ function blockWebsites() {
 
     // sudo로 hosts 파일 복사 (동기 실행)
     const copyCommand = `sudo cp "${tempFile}" "${CONFIG.system_paths.hosts_file}"`;
-    const { execSync } = require("child_process");
 
     try {
       execSync(copyCommand, { stdio: "pipe" });
@@ -645,6 +647,7 @@ function blockWebsites() {
     }
   } catch (error) {
     log("ERROR", `hosts 파일 차단 실패: ${error.message}`);
+    log("ERROR", `에러 스택: ${error.stack}`);
     return false;
   }
 }
@@ -655,16 +658,20 @@ function unblockWebsites() {
       .readFileSync(CONFIG.system_paths.hosts_file, "utf8")
       .split("\n");
 
-    const blockStart = "# VoiceSummarizer Block Start";
-    const blockEnd = "# VoiceSummarizer Block End";
+    // VoiceSummarizer 블록 시작/끝 마커 (기존 FocusTimer 마커도 처리)
+    const blockStarts = [
+      "# VoiceSummarizer Block Start",
+      "# FocusTimer Block Start",
+    ];
+    const blockEnds = ["# VoiceSummarizer Block End", "# FocusTimer Block End"];
 
     let startIdx = -1;
     let endIdx = -1;
 
     for (let i = 0; i < lines.length; i++) {
-      if (lines[i].includes(blockStart)) {
+      if (blockStarts.some((start) => lines[i].includes(start))) {
         startIdx = i;
-      } else if (lines[i].includes(blockEnd)) {
+      } else if (blockEnds.some((end) => lines[i].includes(end))) {
         endIdx = i;
         break;
       }
@@ -682,7 +689,6 @@ function unblockWebsites() {
 
       // sudo로 hosts 파일 복사 (동기 실행)
       const copyCommand = `sudo cp "${tempFile}" "${CONFIG.system_paths.hosts_file}"`;
-      const { execSync } = require("child_process");
 
       try {
         execSync(copyCommand, { stdio: "pipe" });
@@ -1388,6 +1394,53 @@ app.post("/api/settings/reset", (req, res) => {
   }
 });
 
+// 기본 알고리즘 문제 배열 정의
+const algorithmProblems = [
+  {
+    id: "easy_001",
+    title: "두 수의 합",
+    description: "두 정수를 입력받아 합을 출력하는 프로그램을 작성하세요.",
+    difficulty: "EASY",
+    platform: "LOCAL",
+    tags: ["ARRAY", "MATH"],
+    testCases: [
+      { input: "1 2", output: "3" },
+      { input: "5 3", output: "8" },
+      { input: "-1 1", output: "0" },
+    ],
+    solution: "a, b = map(int, input().split())\nprint(a + b)",
+  },
+  {
+    id: "medium_001",
+    title: "이진 탐색",
+    description:
+      "정렬된 배열에서 특정 값을 이진 탐색으로 찾는 프로그램을 작성하세요.",
+    difficulty: "MEDIUM",
+    platform: "LOCAL",
+    tags: ["ARRAY", "BINARY_SEARCH"],
+    testCases: [
+      { input: "5 3\n1 2 3 4 5", output: "2" },
+      { input: "5 6\n1 2 3 4 5", output: "-1" },
+      { input: "3 1\n1 2 3", output: "0" },
+    ],
+    solution: `def binary_search(arr, target):
+    left, right = 0, len(arr) - 1
+    while left <= right:
+        mid = (left + right) // 2
+        if arr[mid] == target:
+            return mid
+        elif arr[mid] < target:
+            left = mid + 1
+        else:
+            right = mid - 1
+    return -1
+
+n, target = map(int, input().split())
+arr = list(map(int, input().split()))
+print(binary_search(arr, target))`,
+  },
+];
+
 // 알고리즘 문제 관련 API
 app.get("/api/algorithm/problems", (req, res) => {
   res.json({
@@ -1670,7 +1723,7 @@ app.post("/api/sync-logs", (req, res) => {
 });
 
 // 서버 시작
-app.listen(PORT, "0.0.0.0", () => {
+app.listen(PORT, "127.0.0.1", () => {
   log("INFO", `차단 서버가 포트 ${PORT}에서 실행 중입니다.`);
   log("INFO", `API 엔드포인트:`);
   log("INFO", `- GET  /api/status - 현재 상태 조회`);

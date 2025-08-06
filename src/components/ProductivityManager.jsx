@@ -20,6 +20,17 @@ import {
   Shield,
 } from "lucide-react";
 
+// API 기본 URL 설정 - 동적 IP 감지
+const getApiBaseUrl = () => {
+  if (process.env.REACT_APP_API_URL) {
+    return process.env.REACT_APP_API_URL;
+  }
+  const hostname = window.location.hostname;
+  return `http://${hostname}:3001`;
+};
+
+const API_BASE_URL = getApiBaseUrl();
+
 const ProductivityManager = () => {
   const [activeTab, setActiveTab] = useState("overview");
   const [timerLogs, setTimerLogs] = useState([]);
@@ -60,7 +71,7 @@ const ProductivityManager = () => {
       );
 
       if (localTimerLogs.length > 0 || localBlockLogs.length > 0) {
-        const response = await fetch("http://localhost:3001/api/sync-logs", {
+        const response = await fetch(`${API_BASE_URL}/api/sync-logs`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -98,8 +109,8 @@ const ProductivityManager = () => {
       // 백엔드 서버에서 로그 불러오기
       try {
         const [timerResponse, blockResponse] = await Promise.all([
-          fetch("http://localhost:3001/api/timer-logs"),
-          fetch("http://localhost:3001/api/block-logs"),
+          fetch(`${API_BASE_URL}/api/timer-logs`),
+          fetch(`${API_BASE_URL}/api/block-logs`),
         ]);
 
         if (timerResponse.ok) {
@@ -259,7 +270,7 @@ const ProductivityManager = () => {
 
     try {
       // 백엔드 서버에 저장
-      const response = await fetch("http://localhost:3001/api/timer-logs", {
+      const response = await fetch(`${API_BASE_URL}/api/timer-logs`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -302,7 +313,7 @@ const ProductivityManager = () => {
 
     try {
       // 백엔드 서버에 저장
-      const response = await fetch("http://localhost:3001/api/block-logs", {
+      const response = await fetch(`${API_BASE_URL}/api/block-logs`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

@@ -11,9 +11,19 @@ import {
 import NotificationBanner from "./NotificationBanner";
 import AlgorithmProblemModal from "./AlgorithmProblemModal";
 
-// API 기본 URL 설정
-const API_BASE_URL =
-  process.env.REACT_APP_API_URL || "http://192.168.1.24:3001";
+// API 기본 URL 설정 - 동적 IP 감지
+const getApiBaseUrl = () => {
+  // 환경 변수가 설정되어 있으면 사용
+  if (process.env.REACT_APP_API_URL) {
+    return process.env.REACT_APP_API_URL;
+  }
+
+  // 현재 호스트의 IP 주소 사용
+  const hostname = window.location.hostname;
+  return `http://${hostname}:3001`;
+};
+
+const API_BASE_URL = getApiBaseUrl();
 
 const BlockPage = ({ onBlockComplete }) => {
   const [blockedSites, setBlockedSites] = useState([]);

@@ -1,13 +1,65 @@
 import React, { useState, useEffect } from "react";
 import { CheckCircle, XCircle, Clock, AlertTriangle } from "lucide-react";
 
+// API 기본 URL 설정 - 동적 IP 감지
+const getApiBaseUrl = () => {
+  if (process.env.REACT_APP_API_URL) {
+    return process.env.REACT_APP_API_URL;
+  }
+  const hostname = window.location.hostname;
+  return `http://${hostname}:3001`;
+};
+
+const API_BASE_URL = getApiBaseUrl();
+
+// 서버 데이터 확인을 위한 별도 컴포넌트
+const ServerDataItem = ({ itemKey, itemName }) => {
+  const [hasData, setHasData] = useState(false);
+
+  // 서버에서 데이터 확인
+  useEffect(() => {
+    const checkServerData = async () => {
+      try {
+        const response = await fetch(`${API_BASE_URL}/api/${itemKey}`);
+        if (response.ok) {
+          const data = await response.json();
+          setHasData(data.logs && data.logs.length > 0);
+        }
+      } catch (error) {
+        console.error(`서버 데이터 확인 실패: ${itemKey}`, error);
+      }
+    };
+    checkServerData();
+  }, [itemKey]);
+
+  const getStatusIcon = (success) => {
+    return success ? (
+      <CheckCircle className="text-green-500" size={16} />
+    ) : (
+      <XCircle className="text-red-500" size={16} />
+    );
+  };
+
+  return (
+    <div className="flex items-center justify-between">
+      <span className="text-sm text-gray-600">{itemName}</span>
+      <div className="flex items-center gap-2">
+        {getStatusIcon(hasData)}
+        <span className="text-sm font-medium">
+          {hasData ? "데이터 있음" : "데이터 없음"}
+        </span>
+      </div>
+    </div>
+  );
+};
+
 const APITest = () => {
   const [testResults, setTestResults] = useState({});
   const [isTesting, setIsTesting] = useState(false);
 
   const testBackendAPI = async () => {
     try {
-      const response = await fetch("http://192.168.1.24:3001/api/status");
+      const response = await fetch(`${API_BASE_URL}/api/status`);
       const data = await response.json();
       return { success: true, data };
     } catch (error) {
@@ -203,42 +255,13 @@ const APITest = () => {
             {[
               { key: "timer-logs", name: "타이머 로그 (서버)" },
               { key: "block-logs", name: "차단 로그 (서버)" },
-            ].map((item) => {
-              const [hasData, setHasData] = useState(false);
-
-              // 서버에서 데이터 확인
-              useEffect(() => {
-                const checkServerData = async () => {
-                  try {
-                    const response = await fetch(
-                      `http://localhost:3001/api/${item.key}`
-                    );
-                    if (response.ok) {
-                      const data = await response.json();
-                      setHasData(data.logs && data.logs.length > 0);
-                    }
-                  } catch (error) {
-                    console.error(`서버 데이터 확인 실패: ${item.key}`, error);
-                  }
-                };
-                checkServerData();
-              }, [item.key]);
-
-              return (
-                <div
-                  key={item.key}
-                  className="flex items-center justify-between"
-                >
-                  <span className="text-sm text-gray-600">{item.name}</span>
-                  <div className="flex items-center gap-2">
-                    {getStatusIcon(hasData)}
-                    <span className="text-sm font-medium">
-                      {hasData ? "데이터 있음" : "데이터 없음"}
-                    </span>
-                  </div>
-                </div>
-              );
-            })}
+            ].map((item) => (
+              <ServerDataItem
+                key={item.key}
+                itemKey={item.key}
+                itemName={item.name}
+              />
+            ))}
           </div>
         </div>
 
