@@ -14,7 +14,12 @@ import {
   X,
 } from "lucide-react";
 
-const APISettings = ({ isOpen, onClose, aiServices }) => {
+const APISettings = ({
+  isOpen,
+  onClose,
+  aiServices,
+  onNavigateToProductivity,
+}) => {
   const [apiKeys, setApiKeys] = useState({});
   const [showKeys, setShowKeys] = useState({});
   const [savedMessage, setSavedMessage] = useState("");
@@ -523,7 +528,12 @@ const APISettings = ({ isOpen, onClose, aiServices }) => {
             </div>
           </button>
           <button
-            onClick={() => openDetailModal("productivity", "생산성 관리")}
+            onClick={() => {
+              onClose();
+              if (onNavigateToProductivity) {
+                onNavigateToProductivity();
+              }
+            }}
             className="w-full flex items-center gap-3 p-3 bg-white rounded-lg hover:bg-blue-50 transition-colors text-left"
           >
             <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center">

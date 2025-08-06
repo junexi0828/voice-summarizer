@@ -35,7 +35,7 @@ const CONFIG = {
   system_paths: {
     hosts_file: "/etc/hosts",
     redirect_ip: "127.0.0.1",
-    backup_path: "/Library/Application Support/FocusTimer/hosts_backup",
+    backup_path: "/Library/Application Support/VoiceSummarizer/hosts_backup",
   },
   blocked_websites: {
     youtube: [
@@ -125,6 +125,8 @@ let userSettings = {
     longBreakInterval: 4,
   },
   blockHistory: [],
+  timerLogs: [],
+  blockLogs: [],
 };
 
 // ----- 유틸리티 함수들 -----
@@ -150,11 +152,17 @@ function log(level, message) {
 // 설정 파일 관리
 const SETTINGS_FILE = path.join(
   process.env.HOME || process.env.USERPROFILE || "",
-  "focus_timer_settings.json"
+  "Library/Application Support/VoiceSummarizer/settings.json"
 );
 
 function saveUserSettings() {
   try {
+    // 디렉토리가 없으면 생성
+    const dir = path.dirname(SETTINGS_FILE);
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
+
     fs.writeFileSync(SETTINGS_FILE, JSON.stringify(userSettings, null, 2));
     log("INFO", "사용자 설정 저장 완료");
   } catch (error) {
@@ -466,7 +474,7 @@ class BrowserManager {
 
       const sessionPath = path.join(
         process.env.HOME || process.env.USERPROFILE || "",
-        "focus_timer_sessions.json"
+        "Library/Application Support/VoiceSummarizer/sessions.json"
       );
       fs.writeFileSync(sessionPath, JSON.stringify(sessionInfo, null, 2));
 
@@ -542,14 +550,17 @@ function backupHosts() {
   try {
     const backupPath = path.join(
       process.env.HOME || process.env.USERPROFILE || "",
-      "Library/Application Support/FocusTimer/hosts_backup"
+      "Library/Application Support/VoiceSummarizer/hosts_backup"
     );
+
+    // 디렉토리가 없으면 생성
+    const dir = path.dirname(backupPath);
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
+
+    // 백업 파일이 없거나 오래된 경우에만 백업
     if (!fs.existsSync(backupPath)) {
-      // 디렉토리가 없으면 생성
-      const dir = path.dirname(backupPath);
-      if (!fs.existsSync(dir)) {
-        fs.mkdirSync(dir, { recursive: true });
-      }
       const hostsContent = fs.readFileSync(
         CONFIG.system_paths.hosts_file,
         "utf8"
@@ -570,9 +581,9 @@ function blockWebsites() {
       .readFileSync(CONFIG.system_paths.hosts_file, "utf8")
       .split("\n");
 
-    // FocusTimer 블록 시작/끝 마커
-    const blockStart = "# FocusTimer Block Start";
-    const blockEnd = "# FocusTimer Block End";
+    // VoiceSummarizer 블록 시작/끝 마커
+    const blockStart = "# VoiceSummarizer Block Start";
+    const blockEnd = "# VoiceSummarizer Block End";
 
     // 기존 블록 제거
     let startIdx = -1;
@@ -603,11 +614,35 @@ function blockWebsites() {
 
     lines.push(blockEnd);
 
-    // 파일에 쓰기
-    fs.writeFileSync(CONFIG.system_paths.hosts_file, lines.join("\n"));
+    // 임시 파일에 쓰기
+    const tempFile = path.join(
+      process.env.HOME || process.env.USERPROFILE || "",
+      "Library/Application Support/VoiceSummarizer/hosts_temp"
+    );
+    fs.writeFileSync(tempFile, lines.join("\n"));
 
-    log("INFO", "hosts 파일 차단 설정 완료");
-    return true;
+    // sudo로 hosts 파일 복사 (동기 실행)
+    const copyCommand = `sudo cp "${tempFile}" "${CONFIG.system_paths.hosts_file}"`;
+    const { execSync } = require("child_process");
+
+    try {
+      execSync(copyCommand, { stdio: "pipe" });
+
+      // 임시 파일 삭제
+      if (fs.existsSync(tempFile)) {
+        fs.unlinkSync(tempFile);
+      }
+
+      log("INFO", "hosts 파일 차단 설정 완료");
+      return true;
+    } catch (error) {
+      log("ERROR", `hosts 파일 복사 실패: ${error.message}`);
+      // 임시 파일 삭제
+      if (fs.existsSync(tempFile)) {
+        fs.unlinkSync(tempFile);
+      }
+      return false;
+    }
   } catch (error) {
     log("ERROR", `hosts 파일 차단 실패: ${error.message}`);
     return false;
@@ -620,8 +655,8 @@ function unblockWebsites() {
       .readFileSync(CONFIG.system_paths.hosts_file, "utf8")
       .split("\n");
 
-    const blockStart = "# FocusTimer Block Start";
-    const blockEnd = "# FocusTimer Block End";
+    const blockStart = "# VoiceSummarizer Block Start";
+    const blockEnd = "# VoiceSummarizer Block End";
 
     let startIdx = -1;
     let endIdx = -1;
@@ -637,9 +672,36 @@ function unblockWebsites() {
 
     if (startIdx !== -1 && endIdx !== -1) {
       lines.splice(startIdx, endIdx - startIdx + 1);
-      fs.writeFileSync(CONFIG.system_paths.hosts_file, lines.join("\n"));
-      log("INFO", "hosts 파일 차단 해제 완료");
-      return true;
+
+      // 임시 파일에 쓰기
+      const tempFile = path.join(
+        process.env.HOME || process.env.USERPROFILE || "",
+        "Library/Application Support/VoiceSummarizer/hosts_temp"
+      );
+      fs.writeFileSync(tempFile, lines.join("\n"));
+
+      // sudo로 hosts 파일 복사 (동기 실행)
+      const copyCommand = `sudo cp "${tempFile}" "${CONFIG.system_paths.hosts_file}"`;
+      const { execSync } = require("child_process");
+
+      try {
+        execSync(copyCommand, { stdio: "pipe" });
+
+        // 임시 파일 삭제
+        if (fs.existsSync(tempFile)) {
+          fs.unlinkSync(tempFile);
+        }
+
+        log("INFO", "hosts 파일 차단 해제 완료");
+        return true;
+      } catch (error) {
+        log("ERROR", `hosts 파일 복사 실패: ${error.message}`);
+        // 임시 파일 삭제
+        if (fs.existsSync(tempFile)) {
+          fs.unlinkSync(tempFile);
+        }
+        return false;
+      }
     }
 
     return false;
@@ -1304,6 +1366,8 @@ app.post("/api/settings/reset", (req, res) => {
         longBreakInterval: 4,
       },
       blockHistory: [],
+      timerLogs: [],
+      blockLogs: [],
     };
 
     saveUserSettings();
@@ -1389,6 +1453,222 @@ app.get("/api/algorithm/random-problem/:difficulty", (req, res) => {
   });
 });
 
+// ----- 타이머 로그 API -----
+app.post("/api/timer-logs", (req, res) => {
+  try {
+    const { duration, type } = req.body;
+
+    if (!duration || !type) {
+      return res.status(400).json({
+        success: false,
+        error: "duration과 type이 필요합니다.",
+      });
+    }
+
+    const timerLog = {
+      id: Date.now(),
+      date: new Date().toISOString().split("T")[0],
+      time: new Date().toLocaleTimeString("ko-KR", {
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: false,
+      }),
+      duration: duration,
+      type: type,
+      timestamp: new Date().toISOString(),
+    };
+
+    userSettings.timerLogs.push(timerLog);
+
+    // 로그 최대 1000개까지만 유지
+    if (userSettings.timerLogs.length > 1000) {
+      userSettings.timerLogs = userSettings.timerLogs.slice(-1000);
+    }
+
+    saveUserSettings();
+
+    log("INFO", `타이머 로그 저장 완료: ${type} ${duration}분`);
+
+    res.json({
+      success: true,
+      message: "타이머 로그가 저장되었습니다.",
+      log: timerLog,
+    });
+  } catch (error) {
+    log("ERROR", `타이머 로그 저장 실패: ${error.message}`);
+    res.status(500).json({
+      success: false,
+      error: error.message,
+    });
+  }
+});
+
+app.get("/api/timer-logs", (req, res) => {
+  try {
+    const { date, limit = 100 } = req.query;
+
+    let logs = userSettings.timerLogs;
+
+    // 특정 날짜 필터링
+    if (date) {
+      logs = logs.filter((log) => log.date === date);
+    }
+
+    // 최신 순으로 정렬하고 제한
+    logs = logs
+      .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
+      .slice(0, parseInt(limit));
+
+    res.json({
+      success: true,
+      logs,
+      total: userSettings.timerLogs.length,
+    });
+  } catch (error) {
+    log("ERROR", `타이머 로그 조회 실패: ${error.message}`);
+    res.status(500).json({
+      success: false,
+      error: error.message,
+    });
+  }
+});
+
+// ----- 차단 로그 API -----
+app.post("/api/block-logs", (req, res) => {
+  try {
+    const { duration, reason } = req.body;
+
+    if (!duration || !reason) {
+      return res.status(400).json({
+        success: false,
+        error: "duration과 reason이 필요합니다.",
+      });
+    }
+
+    const blockLog = {
+      id: Date.now(),
+      date: new Date().toISOString().split("T")[0],
+      time: new Date().toLocaleTimeString("ko-KR", {
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: false,
+      }),
+      duration: duration,
+      reason: reason,
+      timestamp: new Date().toISOString(),
+    };
+
+    userSettings.blockLogs.push(blockLog);
+
+    // 로그 최대 1000개까지만 유지
+    if (userSettings.blockLogs.length > 1000) {
+      userSettings.blockLogs = userSettings.blockLogs.slice(-1000);
+    }
+
+    saveUserSettings();
+
+    log("INFO", `차단 로그 저장 완료: ${reason} ${duration}분`);
+
+    res.json({
+      success: true,
+      message: "차단 로그가 저장되었습니다.",
+      log: blockLog,
+    });
+  } catch (error) {
+    log("ERROR", `차단 로그 저장 실패: ${error.message}`);
+    res.status(500).json({
+      success: false,
+      error: error.message,
+    });
+  }
+});
+
+app.get("/api/block-logs", (req, res) => {
+  try {
+    const { date, limit = 100 } = req.query;
+
+    let logs = userSettings.blockLogs;
+
+    // 특정 날짜 필터링
+    if (date) {
+      logs = logs.filter((log) => log.date === date);
+    }
+
+    // 최신 순으로 정렬하고 제한
+    logs = logs
+      .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
+      .slice(0, parseInt(limit));
+
+    res.json({
+      success: true,
+      logs,
+      total: userSettings.blockLogs.length,
+    });
+  } catch (error) {
+    log("ERROR", `차단 로그 조회 실패: ${error.message}`);
+    res.status(500).json({
+      success: false,
+      error: error.message,
+    });
+  }
+});
+
+// ----- 로그 동기화 API -----
+app.post("/api/sync-logs", (req, res) => {
+  try {
+    const { timerLogs, blockLogs } = req.body;
+
+    // 기존 로그와 새 로그 병합
+    if (timerLogs && Array.isArray(timerLogs)) {
+      const existingIds = new Set(userSettings.timerLogs.map((log) => log.id));
+      const newLogs = timerLogs.filter((log) => !existingIds.has(log.id));
+      userSettings.timerLogs = [...userSettings.timerLogs, ...newLogs];
+
+      // 중복 제거 및 정렬
+      userSettings.timerLogs = userSettings.timerLogs
+        .filter(
+          (log, index, self) => index === self.findIndex((l) => l.id === log.id)
+        )
+        .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
+        .slice(0, 1000);
+    }
+
+    if (blockLogs && Array.isArray(blockLogs)) {
+      const existingIds = new Set(userSettings.blockLogs.map((log) => log.id));
+      const newLogs = blockLogs.filter((log) => !existingIds.has(log.id));
+      userSettings.blockLogs = [...userSettings.blockLogs, ...newLogs];
+
+      // 중복 제거 및 정렬
+      userSettings.blockLogs = userSettings.blockLogs
+        .filter(
+          (log, index, self) => index === self.findIndex((l) => l.id === log.id)
+        )
+        .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
+        .slice(0, 1000);
+    }
+
+    saveUserSettings();
+
+    log(
+      "INFO",
+      `로그 동기화 완료: 타이머 ${userSettings.timerLogs.length}개, 차단 ${userSettings.blockLogs.length}개`
+    );
+
+    res.json({
+      success: true,
+      message: "로그 동기화가 완료되었습니다.",
+      timerLogs: userSettings.timerLogs,
+      blockLogs: userSettings.blockLogs,
+    });
+  } catch (error) {
+    log("ERROR", `로그 동기화 실패: ${error.message}`);
+    res.status(500).json({
+      success: false,
+      error: error.message,
+    });
+  }
+});
+
 // 서버 시작
 app.listen(PORT, "0.0.0.0", () => {
   log("INFO", `차단 서버가 포트 ${PORT}에서 실행 중입니다.`);
@@ -1413,6 +1693,12 @@ app.listen(PORT, "0.0.0.0", () => {
     "INFO",
     `- GET  /api/algorithm/random-problem/:difficulty - 난이도별 랜덤 문제 조회`
   );
+  log("INFO", `로그 관리 API:`);
+  log("INFO", `- POST /api/timer-logs - 타이머 로그 저장`);
+  log("INFO", `- GET  /api/timer-logs - 타이머 로그 조회`);
+  log("INFO", `- POST /api/block-logs - 차단 로그 저장`);
+  log("INFO", `- GET  /api/block-logs - 차단 로그 조회`);
+  log("INFO", `- POST /api/sync-logs - 로그 동기화`);
 });
 
 module.exports = app;

@@ -3,7 +3,9 @@ import "./App.css";
 import VoiceTextSummarizer from "./components/VoiceTextSummarizer";
 import PomodoroTimer from "./components/PomodoroTimer";
 import BlockPage from "./components/BlockPage";
+import ProductivityManager from "./components/ProductivityManager";
 import APISettings from "./components/APISettings";
+import APITest from "./components/APITest";
 import Navigation from "./components/Navigation";
 import { AuthProvider } from "./components/AuthProvider";
 
@@ -50,11 +52,119 @@ function App() {
       case "home":
         return <VoiceTextSummarizer />;
       case "timer":
-        return <PomodoroTimer />;
+        return <PomodoroTimer onTimerComplete={handleTimerComplete} />;
       case "block":
-        return <BlockPage />;
+        return <BlockPage onBlockComplete={handleBlockComplete} />;
+      case "productivity":
+        return <ProductivityManager />;
+      case "apitest":
+        return <APITest />;
       default:
         return <VoiceTextSummarizer />;
+    }
+  };
+
+  const handleTimerComplete = async (duration, type) => {
+    // 타이머 완료 시 로그 추가
+    const timerLog = {
+      id: Date.now(),
+      date: new Date().toISOString().split("T")[0],
+      time: new Date().toLocaleTimeString("ko-KR", {
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: false,
+      }),
+      duration: duration,
+      type: type,
+    };
+
+    try {
+      // 백엔드 서버에 저장
+      const response = await fetch("http://localhost:3001/api/timer-logs", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ duration, type }),
+      });
+
+      if (response.ok) {
+        console.log("타이머 로그가 서버에 저장되었습니다.");
+      } else {
+        console.error("서버 저장 실패, localStorage에 저장");
+        // 서버 저장 실패 시 localStorage에 저장
+        const savedLogs = JSON.parse(
+          localStorage.getItem("productivity_timer_logs") || "[]"
+        );
+        const updatedLogs = [...savedLogs, timerLog];
+        localStorage.setItem(
+          "productivity_timer_logs",
+          JSON.stringify(updatedLogs)
+        );
+      }
+    } catch (error) {
+      console.error("서버 연결 실패, localStorage에 저장:", error);
+      // 서버 연결 실패 시 localStorage에 저장
+      const savedLogs = JSON.parse(
+        localStorage.getItem("productivity_timer_logs") || "[]"
+      );
+      const updatedLogs = [...savedLogs, timerLog];
+      localStorage.setItem(
+        "productivity_timer_logs",
+        JSON.stringify(updatedLogs)
+      );
+    }
+  };
+
+  const handleBlockComplete = async (duration, reason) => {
+    // 차단 완료 시 로그 추가
+    const blockLog = {
+      id: Date.now(),
+      date: new Date().toISOString().split("T")[0],
+      time: new Date().toLocaleTimeString("ko-KR", {
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: false,
+      }),
+      duration: duration,
+      reason: reason,
+    };
+
+    try {
+      // 백엔드 서버에 저장
+      const response = await fetch("http://localhost:3001/api/block-logs", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ duration, reason }),
+      });
+
+      if (response.ok) {
+        console.log("차단 로그가 서버에 저장되었습니다.");
+      } else {
+        console.error("서버 저장 실패, localStorage에 저장");
+        // 서버 저장 실패 시 localStorage에 저장
+        const savedLogs = JSON.parse(
+          localStorage.getItem("productivity_block_logs") || "[]"
+        );
+        const updatedLogs = [...savedLogs, blockLog];
+        localStorage.setItem(
+          "productivity_block_logs",
+          JSON.stringify(updatedLogs)
+        );
+      }
+    } catch (error) {
+      console.error("서버 연결 실패, localStorage에 저장:", error);
+      // 서버 연결 실패 시 localStorage에 저장
+      const savedLogs = JSON.parse(
+        localStorage.getItem("productivity_block_logs") || "[]"
+      );
+      const updatedLogs = [...savedLogs, blockLog];
+      localStorage.setItem(
+        "productivity_block_logs",
+        JSON.stringify(updatedLogs)
+      );
     }
   };
 
@@ -81,6 +191,10 @@ function App() {
           isOpen={showSettings}
           onClose={() => setShowSettings(false)}
           aiServices={aiServices}
+          onNavigateToProductivity={() => {
+            setShowSettings(false);
+            setCurrentPage("productivity");
+          }}
         />
 
         {/* 글로벌 푸터 */}

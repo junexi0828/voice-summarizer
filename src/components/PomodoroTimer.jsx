@@ -10,7 +10,7 @@ import {
 } from "lucide-react";
 import NotificationBanner from "./NotificationBanner";
 
-const PomodoroTimer = () => {
+const PomodoroTimer = ({ onTimerComplete }) => {
   const [timeLeft, setTimeLeft] = useState(25 * 60); // 25분
   const [isRunning, setIsRunning] = useState(false);
   const [isBreak, setIsBreak] = useState(false);
@@ -109,6 +109,11 @@ const PomodoroTimer = () => {
   const handleTimerComplete = useCallback(() => {
     if (!isBreak) {
       // 작업 시간 완료
+      // 타이머 로그 추가
+      if (onTimerComplete) {
+        onTimerComplete(settings.workTime, "focus");
+      }
+
       setPomodoroCount((prev) => prev + 1);
       const shouldTakeLongBreak =
         (pomodoroCount + 1) % settings.longBreakInterval === 0;
@@ -125,6 +130,15 @@ const PomodoroTimer = () => {
       showNotification(message, "success");
     } else {
       // 휴식 시간 완료
+      // 타이머 로그 추가
+      const breakDuration =
+        (pomodoroCount + 1) % settings.longBreakInterval === 0
+          ? settings.longBreak
+          : settings.shortBreak;
+      if (onTimerComplete) {
+        onTimerComplete(breakDuration, "break");
+      }
+
       setBreakCount((prev) => prev + 1);
       setTimeLeft(settings.workTime * 60);
       setIsBreak(false);
@@ -141,6 +155,7 @@ const PomodoroTimer = () => {
     settings.shortBreak,
     settings.workTime,
     showNotification,
+    onTimerComplete,
   ]);
 
   // 타이머 로직

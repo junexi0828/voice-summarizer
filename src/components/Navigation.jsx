@@ -1,11 +1,18 @@
 import React from "react";
-import { Home, Clock, Shield, Settings } from "lucide-react";
+import { Home, Clock, Shield, Settings, BarChart3, Wifi } from "lucide-react";
 
 const Navigation = ({ currentPage, onPageChange }) => {
   const navItems = [
     { id: "home", label: "홈", icon: Home, path: "/" },
     { id: "timer", label: "타이머", icon: Clock, path: "/timer" },
     { id: "block", label: "차단", icon: Shield, path: "/block" },
+    {
+      id: "productivity",
+      label: "생산성",
+      icon: BarChart3,
+      path: "/productivity",
+    },
+    { id: "apitest", label: "API 테스트", icon: Wifi, path: "/apitest" },
     { id: "settings", label: "설정", icon: Settings, path: "/settings" },
   ];
 
