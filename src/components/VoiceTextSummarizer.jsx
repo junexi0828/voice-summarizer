@@ -1,371 +1,424 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { Mic, MicOff, FileText, Copy, RotateCcw, Volume2, Loader2, Settings, Key } from 'lucide-react';
-import { marked } from 'marked';
-import { useAuth } from './AuthProvider';
-import AIServiceManager from './AIServiceManager';
-import APISettings from './APISettings';
-import TextareaAutosize from 'react-textarea-autosize';
+import React, { useState, useRef, useEffect } from "react";
+import {
+  Mic,
+  MicOff,
+  FileText,
+  Copy,
+  RotateCcw,
+  Volume2,
+  Loader2,
+  Settings,
+  Key,
+} from "lucide-react";
+import { marked } from "marked";
+import { useAuth } from "./AuthProvider";
+import AIServiceManager from "./AIServiceManager";
+import APISettings from "./APISettings";
+import TextareaAutosize from "react-textarea-autosize";
 
 const VoiceTextSummarizer = () => {
-    const {
-        selectedAIService,
-        selectAIService,
-        aiServices
-    } = useAuth();
+  const { selectedAIService, selectAIService, aiServices } = useAuth();
 
-    const [isRecording, setIsRecording] = useState(false);
-    const [transcribedText, setTranscribedText] = useState('');
-    const [summarizedText, setSummarizedText] = useState('');
-    const [isProcessing, setIsProcessing] = useState(false);
-    const [isSpeechSupported, setIsSpeechSupported] = useState(false);
-    const [copySuccess, setCopySuccess] = useState(false);
-    const [error, setError] = useState('');
-    const [lang, setLang] = useState('ko-KR');
-    const [showAIServiceSelector, setShowAIServiceSelector] = useState(false);
-    const [showAPISettings, setShowAPISettings] = useState(false);
-    const [copyTranscribedSuccess, setCopyTranscribedSuccess] = useState(false);
+  const [isRecording, setIsRecording] = useState(false);
+  const [transcribedText, setTranscribedText] = useState("");
+  const [summarizedText, setSummarizedText] = useState("");
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [isSpeechSupported, setIsSpeechSupported] = useState(false);
+  const [copySuccess, setCopySuccess] = useState(false);
+  const [error, setError] = useState("");
+  const [lang, setLang] = useState("ko-KR");
+  const [showAIServiceSelector, setShowAIServiceSelector] = useState(false);
+  const [showAPISettings, setShowAPISettings] = useState(false);
+  const [copyTranscribedSuccess, setCopyTranscribedSuccess] = useState(false);
 
-    const recognitionRef = useRef(null);
+  const recognitionRef = useRef(null);
 
-    useEffect(() => {
-        // Web Speech API 지원 확인
-        if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
-            setIsSpeechSupported(true);
-            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-            recognitionRef.current = new SpeechRecognition();
+  useEffect(() => {
+    // Web Speech API 지원 확인
+    if ("webkitSpeechRecognition" in window || "SpeechRecognition" in window) {
+      setIsSpeechSupported(true);
+      const SpeechRecognition =
+        window.SpeechRecognition || window.webkitSpeechRecognition;
+      recognitionRef.current = new SpeechRecognition();
 
-            // 정확도 향상을 위한 설정 (실시간성 주석처리)
-            recognitionRef.current.continuous = true;      // 연속 인식
-            recognitionRef.current.interimResults = false; // 중간 결과 무시
-            recognitionRef.current.lang = lang;
-            recognitionRef.current.maxAlternatives = 1; // 가장 정확한 결과만 사용
+      // 정확도 향상을 위한 설정 (실시간성 주석처리)
+      recognitionRef.current.continuous = true; // 연속 인식
+      recognitionRef.current.interimResults = false; // 중간 결과 무시
+      recognitionRef.current.lang = lang;
+      recognitionRef.current.maxAlternatives = 1; // 가장 정확한 결과만 사용
 
-            recognitionRef.current.onresult = (event) => {
-                // 실시간성을 완전히 차단하고 최종 결과만 처리
-                if (event.results.length > 0) {
-                    const result = event.results[event.results.length - 1]; // 마지막 결과만 사용
+      recognitionRef.current.onresult = (event) => {
+        // 실시간성을 완전히 차단하고 최종 결과만 처리
+        if (event.results.length > 0) {
+          const result = event.results[event.results.length - 1]; // 마지막 결과만 사용
 
-                    // isFinal이 true인 경우만 처리 (최종 결과만)
-                    if (result.isFinal) {
-                        const transcript = result[0].transcript;
-                        const confidence = result[0].confidence;
+          // isFinal이 true인 경우만 처리 (최종 결과만)
+          if (result.isFinal) {
+            const transcript = result[0].transcript;
+            const confidence = result[0].confidence;
 
-                        // 영어일 때만 신뢰도 체크
-                        if (lang.startsWith('en')) {
-                            if (typeof confidence === 'number' && confidence < 0.9) {
-                                setError(`Speech recognition confidence is low (${(confidence * 100).toFixed(1)}%). Please try again.`);
-                            }
-                        }
+            // 영어일 때만 신뢰도 체크
+            if (lang.startsWith("en")) {
+              if (typeof confidence === "number" && confidence < 0.9) {
+                setError(
+                  `Speech recognition confidence is low (${(
+                    confidence * 100
+                  ).toFixed(1)}%). Please try again.`
+                );
+              }
+            }
 
-                        setTranscribedText(prev => prev + transcript + ' ');
-                        console.log('최종 결과만 처리됨:', transcript);
-                    } else {
-                        console.log('중간 결과 무시됨');
-                    }
-                }
-            };
-
-            recognitionRef.current.onerror = (event) => {
-                let errorMessage = '';
-
-                switch (event.error) {
-                    case 'not-allowed':
-                        errorMessage = '마이크 권한이 거부되었습니다. 브라우저 설정에서 마이크 권한을 허용해주세요.';
-                        break;
-                    case 'no-speech':
-                        errorMessage = '음성이 감지되지 않았습니다. 마이크가 정상적으로 작동하는지 확인하고 다시 시도해주세요.';
-                        break;
-                    case 'audio-capture':
-                        errorMessage = '마이크에 접근할 수 없습니다. 다른 애플리케이션이 마이크를 사용 중인지 확인해주세요.';
-                        break;
-                    case 'network':
-                        errorMessage = '네트워크 오류가 발생했습니다. 인터넷 연결을 확인하고 다시 시도해주세요.';
-                        break;
-                    case 'service-not-allowed':
-                        errorMessage = '음성 인식 서비스에 접근할 수 없습니다. 잠시 후 다시 시도해주세요.';
-                        break;
-                    default:
-                        errorMessage = `음성 인식 오류: ${event.error}`;
-                }
-
-                setError(errorMessage);
-                setIsRecording(false);
-            };
-
-            recognitionRef.current.onend = () => {
-                setIsRecording(false);
-            };
+            setTranscribedText((prev) => prev + transcript + " ");
+            console.log("최종 결과만 처리됨:", transcript);
+          } else {
+            console.log("중간 결과 무시됨");
+          }
         }
-    }, [lang]);
+      };
 
-    const startRecording = () => {
-        if (!isSpeechSupported) {
-            setError('이 브라우저에서는 음성 인식이 지원되지 않습니다. Chrome, Edge, Safari 등의 최신 브라우저를 사용해주세요.');
-            return;
-        }
-        if (isRecording) {
-            setError('이미 녹음이 진행 중입니다. 녹음을 중지한 후 다시 시작해주세요.');
-            return;
-        }
-        setError('');
-        setIsRecording(true);
-        recognitionRef.current.lang = lang;
-        recognitionRef.current?.start();
-    };
+      recognitionRef.current.onerror = (event) => {
+        let errorMessage = "";
 
-    const stopRecording = () => {
+        switch (event.error) {
+          case "not-allowed":
+            errorMessage =
+              "마이크 권한이 거부되었습니다. 브라우저 설정에서 마이크 권한을 허용해주세요.";
+            break;
+          case "no-speech":
+            errorMessage =
+              "음성이 감지되지 않았습니다. 마이크가 정상적으로 작동하는지 확인하고 다시 시도해주세요.";
+            break;
+          case "audio-capture":
+            errorMessage =
+              "마이크에 접근할 수 없습니다. 다른 애플리케이션이 마이크를 사용 중인지 확인해주세요.";
+            break;
+          case "network":
+            errorMessage =
+              "네트워크 오류가 발생했습니다. 인터넷 연결을 확인하고 다시 시도해주세요.";
+            break;
+          case "service-not-allowed":
+            errorMessage =
+              "음성 인식 서비스에 접근할 수 없습니다. 잠시 후 다시 시도해주세요.";
+            break;
+          default:
+            errorMessage = `음성 인식 오류: ${event.error}`;
+        }
+
+        setError(errorMessage);
         setIsRecording(false);
-        recognitionRef.current?.stop();
-    };
+      };
 
-    const processWithAI = async () => {
-        // AI 서비스 선택 확인
-        if (!selectedAIService) {
-            setError('AI 서비스를 선택해주세요. "AI 서비스 선택" 버튼을 클릭하여 원하는 AI 서비스를 선택하세요.');
-            return;
-        }
+      recognitionRef.current.onend = () => {
+        setIsRecording(false);
+      };
+    }
+  }, [lang]);
 
-        // 텍스트 입력 확인
-        if (!transcribedText.trim()) {
-            setError('정리할 텍스트가 없습니다. 음성을 녹음하거나 텍스트를 직접 입력해주세요.');
-            return;
-        }
+  const startRecording = () => {
+    if (!isSpeechSupported) {
+      setError(
+        "이 브라우저에서는 음성 인식이 지원되지 않습니다. Chrome, Edge, Safari 등의 최신 브라우저를 사용해주세요."
+      );
+      return;
+    }
+    if (isRecording) {
+      setError(
+        "이미 녹음이 진행 중입니다. 녹음을 중지한 후 다시 시작해주세요."
+      );
+      return;
+    }
+    setError("");
+    setIsRecording(true);
+    recognitionRef.current.lang = lang;
+    recognitionRef.current?.start();
+  };
 
-        setIsProcessing(true);
-        setError('');
+  const stopRecording = () => {
+    setIsRecording(false);
+    recognitionRef.current?.stop();
+  };
 
-        try {
-            // API 키 확인
-            const userToken = await getUserToken(selectedAIService.id);
+  const processWithAI = async () => {
+    // AI 서비스 선택 확인
+    if (!selectedAIService) {
+      setError(
+        'AI 서비스를 선택해주세요. "AI 서비스 선택" 버튼을 클릭하여 원하는 AI 서비스를 선택하세요.'
+      );
+      return;
+    }
 
-            if (!userToken) {
-                setError(`${selectedAIService.name} API 키가 필요합니다. "API 설정" 버튼을 클릭하여 API 키를 입력해주세요.`);
-                return;
-            }
+    // 텍스트 입력 확인
+    if (!transcribedText.trim()) {
+      setError(
+        "정리할 텍스트가 없습니다. 음성을 녹음하거나 텍스트를 직접 입력해주세요."
+      );
+      return;
+    }
 
-            // API 키 형식 검증
-            if (!isValidAPIKey(selectedAIService.id, userToken)) {
-                setError(`${selectedAIService.name} API 키 형식이 올바르지 않습니다. 올바른 API 키를 입력해주세요.`);
-                return;
-            }
+    setIsProcessing(true);
+    setError("");
 
-            const result = await AIServiceManager.processWithAI(
-                selectedAIService.id,
-                transcribedText,
-                userToken
-            );
+    try {
+      // API 키 확인
+      const userToken = await getUserToken(selectedAIService.id);
 
-            setSummarizedText(result);
-        } catch (error) {
-            // 구체적인 에러 메시지 처리
-            let errorMessage = '';
+      if (!userToken) {
+        setError(
+          `${selectedAIService.name} API 키가 필요합니다. "API 설정" 버튼을 클릭하여 API 키를 입력해주세요.`
+        );
+        return;
+      }
 
-            if (error.message.includes('401') || error.message.includes('Unauthorized')) {
-                errorMessage = `${selectedAIService.name} API 키가 유효하지 않습니다. 올바른 API 키를 입력해주세요.`;
-            } else if (error.message.includes('429') || error.message.includes('Rate limit')) {
-                errorMessage = `${selectedAIService.name} API 사용량 제한에 도달했습니다. 잠시 후 다시 시도해주세요.`;
-            } else if (error.message.includes('500') || error.message.includes('Internal server error')) {
-                errorMessage = `${selectedAIService.name} 서버 오류가 발생했습니다. 잠시 후 다시 시도해주세요.`;
-            } else if (error.message.includes('Network') || error.message.includes('fetch')) {
-                errorMessage = '네트워크 연결을 확인해주세요. 인터넷 연결 상태를 점검하고 다시 시도해주세요.';
-            } else {
-                errorMessage = `${selectedAIService.name} API 호출 오류: ${error.message}`;
-            }
+      // API 키 형식 검증
+      if (!isValidAPIKey(selectedAIService.id, userToken)) {
+        setError(
+          `${selectedAIService.name} API 키 형식이 올바르지 않습니다. 올바른 API 키를 입력해주세요.`
+        );
+        return;
+      }
 
-            setError(errorMessage);
-        } finally {
-            setIsProcessing(false);
-        }
-    };
+      const result = await AIServiceManager.processWithAI(
+        selectedAIService.id,
+        transcribedText,
+        userToken
+      );
 
-    // API 키 형식 검증 함수
-    const isValidAPIKey = (serviceId, apiKey) => {
-        if (!apiKey || typeof apiKey !== 'string') return false;
+      setSummarizedText(result);
+    } catch (error) {
+      // 구체적인 에러 메시지 처리
+      let errorMessage = "";
 
-        const trimmedKey = apiKey.trim();
-        if (trimmedKey.length === 0) return false;
+      if (
+        error.message.includes("401") ||
+        error.message.includes("Unauthorized")
+      ) {
+        errorMessage = `${selectedAIService.name} API 키가 유효하지 않습니다. 올바른 API 키를 입력해주세요.`;
+      } else if (
+        error.message.includes("429") ||
+        error.message.includes("Rate limit")
+      ) {
+        errorMessage = `${selectedAIService.name} API 사용량 제한에 도달했습니다. 잠시 후 다시 시도해주세요.`;
+      } else if (
+        error.message.includes("500") ||
+        error.message.includes("Internal server error")
+      ) {
+        errorMessage = `${selectedAIService.name} 서버 오류가 발생했습니다. 잠시 후 다시 시도해주세요.`;
+      } else if (
+        error.message.includes("Network") ||
+        error.message.includes("fetch")
+      ) {
+        errorMessage =
+          "네트워크 연결을 확인해주세요. 인터넷 연결 상태를 점검하고 다시 시도해주세요.";
+      } else {
+        errorMessage = `${selectedAIService.name} API 호출 오류: ${error.message}`;
+      }
 
-        // 서비스별 API 키 형식 검증
-        switch (serviceId) {
-            case 'claude':
-                return trimmedKey.startsWith('sk-ant-');
-            case 'gpt':
-                return trimmedKey.startsWith('sk-');
-            case 'groq':
-                return trimmedKey.startsWith('gsk_');
-            case 'perplexity':
-                return trimmedKey.startsWith('pplx-');
-            case 'gemini':
-                return trimmedKey.length > 20; // Google API 키는 일반적으로 길이가 김
-            default:
-                return trimmedKey.length > 10; // 기본 검증
-        }
-    };
+      setError(errorMessage);
+    } finally {
+      setIsProcessing(false);
+    }
+  };
 
-    const getUserToken = async (serviceId) => {
-        // 실제 구현에서는 사용자가 입력한 API 키를 저장/관리하는 로직이 필요합니다
-        // 여기서는 임시로 localStorage에서 가져오는 방식으로 구현
-        return localStorage.getItem(`${serviceId}_api_key`);
-    };
+  // API 키 형식 검증 함수
+  const isValidAPIKey = (serviceId, apiKey) => {
+    if (!apiKey || typeof apiKey !== "string") return false;
 
-    const copyToClipboard = async () => {
-        try {
-            await navigator.clipboard.writeText(summarizedText);
-            setCopySuccess(true);
-            setTimeout(() => setCopySuccess(false), 2000);
-        } catch (err) {
-            setError('클립보드 복사에 실패했습니다. 브라우저에서 클립보드 권한을 허용해주세요.');
-        }
-    };
+    const trimmedKey = apiKey.trim();
+    if (trimmedKey.length === 0) return false;
 
-    const resetAll = () => {
-        setTranscribedText('');
-        setSummarizedText('');
-        setError('');
-        setCopySuccess(false);
-    };
+    // 서비스별 API 키 형식 검증
+    switch (serviceId) {
+      case "claude":
+        return trimmedKey.startsWith("sk-ant-");
+      case "gpt":
+        return trimmedKey.startsWith("sk-");
+      case "groq":
+        return trimmedKey.startsWith("gsk_");
+      case "perplexity":
+        return trimmedKey.startsWith("pplx-");
+      case "gemini":
+        return trimmedKey.length > 20; // Google API 키는 일반적으로 길이가 김
+      default:
+        return trimmedKey.length > 10; // 기본 검증
+    }
+  };
 
-    const handleTextChange = (e) => {
-        setTranscribedText(e.target.value);
-    };
+  const getUserToken = async (serviceId) => {
+    // 실제 구현에서는 사용자가 입력한 API 키를 저장/관리하는 로직이 필요합니다
+    // 여기서는 임시로 localStorage에서 가져오는 방식으로 구현
+    return localStorage.getItem(`${serviceId}_api_key`);
+  };
 
-    // 음성 인식 결과 복사 함수
-    const copyTranscribedToClipboard = async () => {
-        try {
-            await navigator.clipboard.writeText(transcribedText);
-            setCopyTranscribedSuccess(true);
-            setTimeout(() => setCopyTranscribedSuccess(false), 1500);
-        } catch (e) {
-            setError('클립보드 복사에 실패했습니다.');
-        }
-    };
+  const copyToClipboard = async () => {
+    try {
+      await navigator.clipboard.writeText(summarizedText);
+      setCopySuccess(true);
+      setTimeout(() => setCopySuccess(false), 2000);
+    } catch (err) {
+      setError(
+        "클립보드 복사에 실패했습니다. 브라우저에서 클립보드 권한을 허용해주세요."
+      );
+    }
+  };
 
-    return (
-        <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
-            <div className="max-w-7xl mx-auto">
-                {/* 헤더 */}
-                <div className="text-center mb-8">
-                    <h1 className="text-4xl font-bold text-gray-800 mb-2 flex items-center justify-center gap-3">
-                        <Volume2 className="text-blue-600" size={40} />
-                        AI 음성 텍스트 정리 도구
-                    </h1>
-                    <p className="text-gray-600 text-lg">
-                        음성을 텍스트로 변환하고 AI로 자동 정리하세요
-                    </p>
+  const resetAll = () => {
+    setTranscribedText("");
+    setSummarizedText("");
+    setError("");
+    setCopySuccess(false);
+  };
+
+  const handleTextChange = (e) => {
+    setTranscribedText(e.target.value);
+  };
+
+  // 음성 인식 결과 복사 함수
+  const copyTranscribedToClipboard = async () => {
+    try {
+      await navigator.clipboard.writeText(transcribedText);
+      setCopyTranscribedSuccess(true);
+      setTimeout(() => setCopyTranscribedSuccess(false), 1500);
+    } catch (e) {
+      setError("클립보드 복사에 실패했습니다.");
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
+      <div className="max-w-7xl mx-auto pt-8">
+        {/* 헤더 */}
+        <div className="text-center mb-8">
+          <h1 className="text-4xl font-bold text-gray-800 mb-2 flex items-center justify-center gap-3">
+            <Volume2 className="text-blue-600" size={40} />
+            AI 음성 텍스트 정리 도구
+          </h1>
+          <p className="text-gray-600 text-lg">
+            음성을 텍스트로 변환하고 AI로 자동 정리하세요
+          </p>
+        </div>
+
+        {/* AI 서비스 선택 및 설정 */}
+        <div className="mb-6 p-4 bg-white rounded-lg shadow-md">
+          <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 md:gap-0">
+            <div className="flex items-center gap-3">
+              {selectedAIService ? (
+                <div className="flex items-center gap-2">
+                  <span className="text-2xl">{selectedAIService.icon}</span>
+                  <span className="font-medium">{selectedAIService.name}</span>
                 </div>
+              ) : (
+                <div className="text-gray-600">AI 서비스를 선택해주세요</div>
+              )}
+            </div>
+            <div className="flex items-center gap-2 md:gap-3 mt-3 md:mt-0">
+              <button
+                onClick={() => setShowAIServiceSelector(!showAIServiceSelector)}
+                className="flex items-center gap-2 px-3 py-1.5 md:px-4 md:py-2 text-sm md:text-base bg-blue-600 text-white rounded-lg hover:bg-blue-700 min-w-[100px] md:min-w-[120px]"
+              >
+                <Settings size={16} />
+                AI 서비스 선택
+              </button>
+              <button
+                onClick={() => setShowAPISettings(true)}
+                className="flex items-center gap-2 px-3 py-1.5 md:px-4 md:py-2 text-sm md:text-base bg-gray-600 text-white rounded-lg hover:bg-gray-700 min-w-[100px] md:min-w-[120px]"
+              >
+                <Key size={16} />
+                API 설정
+              </button>
+            </div>
+          </div>
+        </div>
 
-                {/* AI 서비스 선택 및 설정 */}
-                <div className="mb-6 p-4 bg-white rounded-lg shadow-md">
-                    <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 md:gap-0">
-                        <div className="flex items-center gap-3">
-                            {selectedAIService ? (
-                                <div className="flex items-center gap-2">
-                                    <span className="text-2xl">{selectedAIService.icon}</span>
-                                    <span className="font-medium">{selectedAIService.name}</span>
-                                </div>
-                            ) : (
-                                <div className="text-gray-600">
-                                    AI 서비스를 선택해주세요
-                                </div>
-                            )}
-                        </div>
-                        <div className="flex items-center gap-2 md:gap-3 mt-3 md:mt-0">
-                            <button
-                                onClick={() => setShowAIServiceSelector(!showAIServiceSelector)}
-                                className="flex items-center gap-2 px-3 py-1.5 md:px-4 md:py-2 text-sm md:text-base bg-blue-600 text-white rounded-lg hover:bg-blue-700 min-w-[100px] md:min-w-[120px]"
-                            >
-                                <Settings size={16} />
-                                AI 서비스 선택
-                            </button>
-                            <button
-                                onClick={() => setShowAPISettings(true)}
-                                className="flex items-center gap-2 px-3 py-1.5 md:px-4 md:py-2 text-sm md:text-base bg-gray-600 text-white rounded-lg hover:bg-gray-700 min-w-[100px] md:min-w-[120px]"
-                            >
-                                <Key size={16} />
-                                API 설정
-                            </button>
-                        </div>
+        {/* AI 서비스 선택 모달 */}
+        {showAIServiceSelector && (
+          <div className="mb-6 p-4 bg-white rounded-lg shadow-md">
+            <h3 className="text-lg font-medium mb-4">AI 서비스 선택</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {aiServices &&
+                Array.isArray(aiServices) &&
+                aiServices.map((service) => (
+                  <button
+                    key={service.id}
+                    onClick={() => {
+                      selectAIService(service.id);
+                      setShowAIServiceSelector(false);
+                    }}
+                    className={`p-4 rounded-lg border-2 transition-all ${
+                      selectedAIService?.id === service.id
+                        ? "border-blue-500 bg-blue-50"
+                        : "border-gray-200 hover:border-gray-300"
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <span className="text-2xl">{service.icon}</span>
+                      <div className="text-left">
+                        <p className="font-medium">{service.name}</p>
+                        <p className="text-sm text-gray-600">
+                          {service.description}
+                        </p>
+                      </div>
                     </div>
-                </div>
+                  </button>
+                ))}
+            </div>
+          </div>
+        )}
 
-                {/* AI 서비스 선택 모달 */}
-                {showAIServiceSelector && (
-                    <div className="mb-6 p-4 bg-white rounded-lg shadow-md">
-                        <h3 className="text-lg font-medium mb-4">AI 서비스 선택</h3>
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                            {aiServices.map((service) => (
-                                <button
-                                    key={service.id}
-                                    onClick={() => {
-                                        selectAIService(service.id);
-                                        setShowAIServiceSelector(false);
-                                    }}
-                                    className={`p-4 rounded-lg border-2 transition-all ${selectedAIService?.id === service.id
-                                        ? 'border-blue-500 bg-blue-50'
-                                        : 'border-gray-200 hover:border-gray-300'
-                                        }`}
-                                >
-                                    <div className="flex items-center gap-3">
-                                        <span className="text-2xl">{service.icon}</span>
-                                        <div className="text-left">
-                                            <p className="font-medium">{service.name}</p>
-                                            <p className="text-sm text-gray-600">{service.description}</p>
-                                        </div>
-                                    </div>
-                                </button>
-                            ))}
-                        </div>
-                    </div>
-                )}
+        {/* 에러 메시지 */}
+        {error && (
+          <div className="mb-6 p-4 bg-red-100 border border-red-400 text-red-700 rounded-lg">
+            {error}
+          </div>
+        )}
 
-                {/* 에러 메시지 */}
-                {error && (
-                    <div className="mb-6 p-4 bg-red-100 border border-red-400 text-red-700 rounded-lg">
-                        {error}
-                    </div>
-                )}
+        {/* 컨트롤 버튼들 */}
+        <div className="flex flex-col md:flex-row justify-center gap-2 md:gap-4 mb-8">
+          <button
+            onClick={isRecording ? stopRecording : startRecording}
+            disabled={!isSpeechSupported}
+            className={`flex items-center gap-2 px-4 py-2 md:px-6 md:py-3 text-sm md:text-base rounded-lg font-medium transition-all ${
+              isRecording
+                ? "bg-red-600 hover:bg-red-700 text-white"
+                : "bg-blue-600 hover:bg-blue-700 text-white"
+            } ${!isSpeechSupported ? "opacity-50 cursor-not-allowed" : ""}`}
+          >
+            {isRecording ? <MicOff size={18} /> : <Mic size={18} />}
+            {isRecording ? "녹음 중지" : "음성 녹음 시작"}
+          </button>
 
-                {/* 컨트롤 버튼들 */}
-                <div className="flex flex-col md:flex-row justify-center gap-2 md:gap-4 mb-8">
-                    <button
-                        onClick={isRecording ? stopRecording : startRecording}
-                        disabled={!isSpeechSupported}
-                        className={`flex items-center gap-2 px-4 py-2 md:px-6 md:py-3 text-sm md:text-base rounded-lg font-medium transition-all ${isRecording
-                            ? 'bg-red-600 hover:bg-red-700 text-white'
-                            : 'bg-blue-600 hover:bg-blue-700 text-white'
-                            } ${!isSpeechSupported ? 'opacity-50 cursor-not-allowed' : ''}`}
-                    >
-                        {isRecording ? <MicOff size={18} /> : <Mic size={18} />}
-                        {isRecording ? '녹음 중지' : '음성 녹음 시작'}
-                    </button>
+          <button
+            onClick={processWithAI}
+            disabled={
+              !selectedAIService || !transcribedText.trim() || isProcessing
+            }
+            className="flex items-center gap-2 px-4 py-2 md:px-6 md:py-3 text-sm md:text-base bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {isProcessing ? (
+              <Loader2 className="animate-spin" size={18} />
+            ) : (
+              <FileText size={18} />
+            )}
+            {isProcessing ? "처리 중..." : "AI 정리하기"}
+          </button>
 
-                    <button
-                        onClick={processWithAI}
-                        disabled={!selectedAIService || !transcribedText.trim() || isProcessing}
-                        className="flex items-center gap-2 px-4 py-2 md:px-6 md:py-3 text-sm md:text-base bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                        {isProcessing ? <Loader2 className="animate-spin" size={18} /> : <FileText size={18} />}
-                        {isProcessing ? '처리 중...' : 'AI 정리하기'}
-                    </button>
+          <button
+            onClick={resetAll}
+            className="flex items-center gap-2 px-4 py-2 md:px-6 md:py-3 text-sm md:text-base bg-gray-600 hover:bg-gray-700 text-white rounded-lg font-medium transition-all"
+          >
+            <RotateCcw size={18} />
+            초기화
+          </button>
+        </div>
 
-                    <button
-                        onClick={resetAll}
-                        className="flex items-center gap-2 px-4 py-2 md:px-6 md:py-3 text-sm md:text-base bg-gray-600 hover:bg-gray-700 text-white rounded-lg font-medium transition-all"
-                    >
-                        <RotateCcw size={18} />
-                        초기화
-                    </button>
-                </div>
-
-                {/* 메인 컨텐츠 영역 */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    {/* 음성 인식 결과 */}
-                    <div className="bg-white rounded-lg shadow-md p-6 flex flex-col h-full">
-                        <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
-                            <Mic className="text-blue-600" size={24} />
-                            음성 인식 결과
-                        </h2>
-                        {/*
+        {/* 메인 컨텐츠 영역 */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* 음성 인식 결과 */}
+          <div className="bg-white rounded-lg shadow-md p-6 flex flex-col h-full">
+            <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
+              <Mic className="text-blue-600" size={24} />
+              음성 인식 결과
+            </h2>
+            {/*
                           [텍스트 입력창(음성 인식 결과) 높이/스크롤 설정]
                           - flex-grow: 남은 공간을 모두 차지
                           - min-h-64 : 가변창 최소 높이(16rem, 약 24줄)
@@ -374,88 +427,124 @@ const VoiceTextSummarizer = () => {
                           - resize-y : 사용자가 세로 크기 조절 가능
                           - mt-4 : 텍스트 입력창 위에 여백 조절
                         */}
-                        <div className="relative">
-                            {/* 텍스트 입력창 (자동 높이 조절) */}
-                            <TextareaAutosize
-                                value={transcribedText}
-                                onChange={handleTextChange}
-                                placeholder="음성을 녹음하거나 직접 텍스트를 입력하세요..."
-                                minRows={8} // 최소 줄 수
-                                maxRows={24} // 최대 줄 수
-                                className="w-full p-4 border border-gray-300 rounded-lg resize-none focus:ring-2 focus:ring-blue-500 focus:border-transparent overflow-y-auto"
-                            />
-                            <button
-                                onClick={copyTranscribedToClipboard}
-                                className="absolute top-2 right-2 p-2 bg-blue-600 text-white rounded opacity-70 hover:opacity-100 transition-opacity hover:bg-blue-700 transition-colors"
-                                title="복사"
-                            >
-                                <Copy size={16} />
-                            </button>
-                        </div>
-                        {copyTranscribedSuccess && (
-                            <p className="mt-2 text-sm text-green-600">클립보드에 복사되었습니다!</p>
-                        )}
-                        <div className="mt-4 flex justify-between items-center flex-shrink-0">
-                            <div className="flex gap-2">
-                                <button
-                                    onClick={() => setLang('ko-KR')}
-                                    className={`px-3 py-1 rounded text-sm ${lang === 'ko-KR' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700'}`}
-                                >
-                                    한국어
-                                </button>
-                                <button
-                                    onClick={() => setLang('en-US')}
-                                    className={`px-3 py-1 rounded text-sm ${lang === 'en-US' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700'}`}
-                                >
-                                    English
-                                </button>
-                            </div>
-                            <span className="text-sm text-gray-500">
-                                {transcribedText.length}자
-                            </span>
-                        </div>
-                    </div>
-
-                    {/* AI 정리 결과 */}
-                    <div className="bg-white rounded-lg shadow-md p-6">
-                        <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
-                            <FileText className="text-green-600" size={24} />
-                            AI 정리 결과
-                        </h2>
-                        <div className="relative">
-                            <div className="w-full min-h-64 max-h-[38rem] p-4 border border-gray-300 rounded-lg overflow-y-auto bg-gray-50">
-                                {summarizedText ? (
-                                    <div className="prose prose-sm max-w-none prose-gray text-left">
-                                        <div dangerouslySetInnerHTML={{ __html: marked(summarizedText) }} />
-                                    </div>
-                                ) : (
-                                    <p className="text-gray-500">AI 정리 결과가 여기에 표시됩니다...</p>
-                                )}
-                            </div>
-                            {summarizedText && (
-                                <button
-                                    onClick={copyToClipboard}
-                                    className="absolute top-2 right-2 p-2 bg-blue-600 text-white rounded opacity-70 hover:opacity-100 transition-opacity hover:bg-blue-700 transition-colors"
-                                >
-                                    <Copy size={16} />
-                                </button>
-                            )}
-                        </div>
-                        {copySuccess && (
-                            <p className="mt-2 text-sm text-green-600">클립보드에 복사되었습니다!</p>
-                        )}
-                    </div>
-                </div>
-
-                {/* API 설정 모달 */}
-                <APISettings
-                    isOpen={showAPISettings}
-                    onClose={() => setShowAPISettings(false)}
-                    aiServices={aiServices}
-                />
+            <div className="relative">
+              {/* 텍스트 입력창 (자동 높이 조절) */}
+              <TextareaAutosize
+                value={transcribedText}
+                onChange={handleTextChange}
+                placeholder="음성을 녹음하거나 직접 텍스트를 입력하세요..."
+                minRows={8} // 최소 줄 수
+                maxRows={24} // 최대 줄 수
+                className="w-full p-4 border border-gray-300 rounded-lg resize-none focus:ring-2 focus:ring-blue-500 focus:border-transparent overflow-y-auto"
+              />
+              <button
+                onClick={copyTranscribedToClipboard}
+                className="absolute top-2 right-2 p-2 bg-blue-600 text-white rounded opacity-70 hover:opacity-100 transition-opacity hover:bg-blue-700 transition-colors"
+                title="복사"
+              >
+                <Copy size={16} />
+              </button>
             </div>
+            {copyTranscribedSuccess && (
+              <p className="mt-2 text-sm text-green-600">
+                클립보드에 복사되었습니다!
+              </p>
+            )}
+            <div className="mt-4 flex justify-between items-center flex-shrink-0">
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setLang("ko-KR")}
+                  className={`px-3 py-1 rounded text-sm ${
+                    lang === "ko-KR"
+                      ? "bg-blue-600 text-white"
+                      : "bg-gray-200 text-gray-700"
+                  }`}
+                >
+                  한국어
+                </button>
+                <button
+                  onClick={() => setLang("en-US")}
+                  className={`px-3 py-1 rounded text-sm ${
+                    lang === "en-US"
+                      ? "bg-blue-600 text-white"
+                      : "bg-gray-200 text-gray-700"
+                  }`}
+                >
+                  English
+                </button>
+              </div>
+              <span className="text-sm text-gray-500">
+                {transcribedText.length}자
+              </span>
+            </div>
+          </div>
+
+          {/* AI 정리 결과 */}
+          <div className="bg-white rounded-lg shadow-md p-6">
+            <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
+              <FileText className="text-green-600" size={24} />
+              AI 정리 결과
+            </h2>
+            <div className="relative">
+              <div className="w-full min-h-64 max-h-[38rem] p-4 border border-gray-300 rounded-lg overflow-y-auto bg-gray-50">
+                {summarizedText ? (
+                  <div className="prose prose-sm max-w-none prose-gray text-left">
+                    <div
+                      dangerouslySetInnerHTML={{
+                        __html: marked(summarizedText),
+                      }}
+                    />
+                  </div>
+                ) : (
+                  <p className="text-gray-500">
+                    AI 정리 결과가 여기에 표시됩니다...
+                  </p>
+                )}
+              </div>
+              {summarizedText && (
+                <button
+                  onClick={copyToClipboard}
+                  className="absolute top-2 right-2 p-2 bg-blue-600 text-white rounded opacity-70 hover:opacity-100 transition-opacity hover:bg-blue-700 transition-colors"
+                >
+                  <Copy size={16} />
+                </button>
+              )}
+            </div>
+            {copySuccess && (
+              <p className="mt-2 text-sm text-green-600">
+                클립보드에 복사되었습니다!
+              </p>
+            )}
+          </div>
         </div>
-    );
+
+        {/* API 설정 모달 */}
+        <APISettings
+          isOpen={showAPISettings}
+          onClose={() => setShowAPISettings(false)}
+          aiServices={aiServices}
+        />
+
+        {/* API 안내문구 */}
+        <div className="mt-8 mb-0 bg-blue-50 border border-blue-200 rounded-lg p-4">
+          <div className="text-center text-sm text-blue-800">
+            <p className="mb-2">
+              <strong>🔐 API 키 보안 안내</strong>
+            </p>
+            <p className="text-xs leading-relaxed">
+              이 서비스는 사용자의 API 키를{" "}
+              <strong>서버에 저장하지 않으며</strong>, 모든 데이터는{" "}
+              <strong>브라우저 로컬에만 저장</strong>됩니다. 개인정보 보호를
+              위해 안전하게 관리됩니다.
+            </p>
+            <p className="text-xs mt-2 text-blue-600">
+              © 2025 Juns. 모든 권리 보유. | 무단 복제 및 배포 금지
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 };
 
 export default VoiceTextSummarizer;
