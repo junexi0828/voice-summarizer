@@ -11,6 +11,10 @@ import {
 import NotificationBanner from "./NotificationBanner";
 import AlgorithmProblemModal from "./AlgorithmProblemModal";
 
+// API 기본 URL 설정
+const API_BASE_URL =
+  process.env.REACT_APP_API_URL || "http://192.168.1.24:3001";
+
 const BlockPage = () => {
   const [blockedSites, setBlockedSites] = useState([]);
   const [blockStats, setBlockStats] = useState({
@@ -110,7 +114,7 @@ const BlockPage = () => {
   // 백엔드에서 차단 상태 가져오기
   const fetchBlockStatus = useCallback(async () => {
     try {
-      const response = await fetch("http://localhost:3001/api/block/status");
+      const response = await fetch(`${API_BASE_URL}/api/block/status`);
       const data = await response.json();
 
       if (data.success) {
@@ -163,9 +167,9 @@ const BlockPage = () => {
       };
 
       if (pendingAction === "stop") {
-        endpoint = "http://localhost:3001/api/block/stop";
+        endpoint = `${API_BASE_URL}/api/block/stop`;
       } else if (pendingAction === "schedule") {
-        endpoint = "http://localhost:3001/api/settings/block-schedule";
+        endpoint = `${API_BASE_URL}/api/settings/block-schedule`;
         requestBody = {
           ...requestBody,
           startTime: blockSchedule.startTime,
@@ -230,15 +234,12 @@ const BlockPage = () => {
   const callBlockAPI = async (action) => {
     setIsLoading(true);
     try {
-      const response = await fetch(
-        `http://localhost:3001/api/block/${action}`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-        }
-      );
+      const response = await fetch(`${API_BASE_URL}/api/block/${action}`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
 
       const data = await response.json();
 
@@ -330,7 +331,7 @@ const BlockPage = () => {
         .filter((site) => site.isBlocked)
         .map((site) => site.domain);
 
-      await fetch("http://localhost:3001/api/settings/blocked-sites", {
+      await fetch(`${API_BASE_URL}/api/settings/blocked-sites`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ blockedSites: blockedDomains }),
@@ -366,7 +367,7 @@ const BlockPage = () => {
         .filter((site) => site.isBlocked)
         .map((site) => site.domain);
 
-      await fetch("http://localhost:3001/api/settings/blocked-sites", {
+      await fetch(`${API_BASE_URL}/api/settings/blocked-sites`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ blockedSites: blockedDomains }),
@@ -397,7 +398,7 @@ const BlockPage = () => {
   const saveBlockSchedule = useCallback(async (newSchedule) => {
     try {
       const response = await fetch(
-        "http://localhost:3001/api/settings/block-schedule",
+        `${API_BASE_URL}/api/settings/block-schedule`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
