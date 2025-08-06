@@ -28,64 +28,73 @@ const PomodoroTimer = () => {
     shortBreak: 5,
     longBreak: 15,
     longBreakInterval: 4,
+    soundType: "default", // "default" 또는 "f1"
   });
 
   const intervalRef = useRef(null);
+  const audioRef = useRef(null);
+  const f1AudioRef = useRef(null);
 
-  // F1 무전 알림음 재생
+  // 알림음 재생 (선택된 타입에 따라)
   const playNotificationSound = useCallback(() => {
     if (isMuted) return;
 
     try {
-      const audioContext = new (window.AudioContext ||
-        window.webkitAudioContext)();
+      if (settings.soundType === "f1") {
+        // F1 무전 음원 파일 재생
+        if (f1AudioRef.current) {
+          f1AudioRef.current.currentTime = 0;
+          f1AudioRef.current
+            .play()
+            .catch((e) => console.log("F1 무전 재생 실패:", e));
+        }
+      } else {
+        // 기본 알림음 (Web Audio API)
+        const audioContext = new (window.AudioContext ||
+          window.webkitAudioContext)();
 
-      // F1 무전음 패턴: 삐-삐-삐 (3번의 짧은 비프음)
-      const playBeep = (frequency, startTime, duration) => {
-        const oscillator = audioContext.createOscillator();
-        const gainNode = audioContext.createGain();
+        // 기본 알림음 패턴: 삐-삐 (2번의 비프음)
+        const playBeep = (frequency, startTime, duration) => {
+          const oscillator = audioContext.createOscillator();
+          const gainNode = audioContext.createGain();
 
-        oscillator.connect(gainNode);
-        gainNode.connect(audioContext.destination);
+          oscillator.connect(gainNode);
+          gainNode.connect(audioContext.destination);
 
-        // F1 무전 특유의 톤 (1500Hz)
-        oscillator.frequency.setValueAtTime(
-          frequency,
-          audioContext.currentTime
-        );
-        oscillator.type = "square"; // 사각파로 더 날카로운 소리
+          oscillator.frequency.setValueAtTime(
+            frequency,
+            audioContext.currentTime
+          );
+          oscillator.type = "sine";
 
-        // 볼륨 설정 (F1 무전처럼 날카롭게)
-        gainNode.gain.setValueAtTime(0, audioContext.currentTime);
-        gainNode.gain.linearRampToValueAtTime(
-          0.4,
-          audioContext.currentTime + 0.05
-        );
-        gainNode.gain.linearRampToValueAtTime(
-          0.4,
-          audioContext.currentTime + duration - 0.05
-        );
-        gainNode.gain.linearRampToValueAtTime(
-          0,
-          audioContext.currentTime + duration
-        );
+          gainNode.gain.setValueAtTime(0, audioContext.currentTime);
+          gainNode.gain.linearRampToValueAtTime(
+            0.3,
+            audioContext.currentTime + 0.1
+          );
+          gainNode.gain.linearRampToValueAtTime(
+            0.3,
+            audioContext.currentTime + duration - 0.1
+          );
+          gainNode.gain.linearRampToValueAtTime(
+            0,
+            audioContext.currentTime + duration
+          );
 
-        oscillator.start(audioContext.currentTime + startTime);
-        oscillator.stop(audioContext.currentTime + startTime + duration);
-      };
+          oscillator.start(audioContext.currentTime + startTime);
+          oscillator.stop(audioContext.currentTime + startTime + duration);
+        };
 
-      // 첫 번째 비프음
-      playBeep(1500, 0, 0.2);
+        // 첫 번째 비프음
+        playBeep(800, 0, 0.3);
 
-      // 두 번째 비프음 (0.3초 후)
-      playBeep(1500, 0.3, 0.2);
-
-      // 세 번째 비프음 (0.6초 후)
-      playBeep(1500, 0.6, 0.2);
+        // 두 번째 비프음 (0.4초 후)
+        playBeep(1000, 0.4, 0.3);
+      }
     } catch (error) {
-      console.log("F1 무전 알림음 재생 실패:", error);
+      console.log("알림음 재생 실패:", error);
     }
-  }, [isMuted]);
+  }, [isMuted, settings.soundType]);
 
   // 알림 표시
   const showNotification = useCallback((message, type = "info") => {
@@ -301,9 +310,9 @@ const PomodoroTimer = () => {
 
             <button
               onClick={playNotificationSound}
-              className="flex items-center gap-2 px-4 py-3 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition-all"
+              className="flex items-center gap-2 px-4 py-3 bg-orange-600 hover:bg-orange-700 text-white rounded-lg font-medium transition-all"
             >
-              🏎️ F1 무전
+              {settings.soundType === "f1" ? "🏎️ F1 테스트" : "🔔 테스트"}
             </button>
 
             <button
@@ -411,6 +420,24 @@ const PomodoroTimer = () => {
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  알림음 선택
+                </label>
+                <select
+                  value={settings.soundType}
+                  onChange={(e) =>
+                    setSettings((prev) => ({
+                      ...prev,
+                      soundType: e.target.value,
+                    }))
+                  }
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="default">🔔 기본 알림음</option>
+                  <option value="f1">🏎️ F1 무전</option>
+                </select>
+              </div>
             </div>
             <div className="mt-6 text-center">
               <button
@@ -468,6 +495,17 @@ const PomodoroTimer = () => {
             </div>
           </div>
         </div>
+
+        {/* 알림음 요소들 */}
+        <audio ref={audioRef} preload="auto" style={{ display: "none" }}>
+          <source
+            src="data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBSuBzvLZiTYIG2m98OScTgwOUarm7blmGgU7k9n1unEiBC13yO/eizEIHWq+8+OWT"
+            type="audio/wav"
+          />
+        </audio>
+        <audio ref={f1AudioRef} preload="auto" style={{ display: "none" }}>
+          <source src="/TeamRadioF1FX.wav" type="audio/wav" />
+        </audio>
 
         {/* 알림 배너 */}
         <NotificationBanner
