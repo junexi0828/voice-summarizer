@@ -13,9 +13,9 @@ export const useAuth = () => {
 // Chrome API 사용 가능 여부 확인 함수
 const isChromeExtensionAvailable = () => {
     return typeof window !== 'undefined' &&
-        typeof chrome !== 'undefined' &&
-        chrome.runtime &&
-        chrome.runtime.id;
+        typeof window.chrome !== 'undefined' &&
+        window.chrome.runtime &&
+        window.chrome.runtime.id;
 };
 
 export const AuthProvider = ({ children }) => {
@@ -68,7 +68,7 @@ export const AuthProvider = ({ children }) => {
         // 저장된 AI 서비스 선택 확인
         if (isChromeExtension) {
             try {
-                chrome.storage.local.get(['selectedAIService'], (result) => {
+                window.chrome.storage.local.get(['selectedAIService'], (result) => {
                     if (result.selectedAIService) {
                         setSelectedAIService(result.selectedAIService);
                     }
@@ -99,7 +99,7 @@ export const AuthProvider = ({ children }) => {
 
         if (isChromeExtension) {
             try {
-                chrome.storage.local.set({ selectedAIService: service });
+                window.chrome.storage.local.set({ selectedAIService: service });
             } catch (error) {
                 console.error('Chrome storage set error:', error);
             }
