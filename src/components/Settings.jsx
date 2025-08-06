@@ -1,5 +1,12 @@
 import React, { useState, useEffect } from "react";
-import { Settings, Key, Clock, Shield, Save, Loader2 } from "lucide-react";
+import {
+  Settings as SettingsIcon,
+  Key,
+  Clock,
+  Shield,
+  Save,
+  Loader2,
+} from "lucide-react";
 import APISettings from "./APISettings";
 
 const Settings = ({ isOpen, onClose }) => {
@@ -30,7 +37,7 @@ const Settings = ({ isOpen, onClose }) => {
   const loadSettings = async () => {
     try {
       setIsLoading(true);
-      const response = await fetch('http://localhost:3001/api/settings');
+      const response = await fetch("http://localhost:3001/api/settings");
       if (response.ok) {
         const data = await response.json();
         if (data.success) {
@@ -41,7 +48,7 @@ const Settings = ({ isOpen, onClose }) => {
         }
       }
     } catch (error) {
-      console.error('설정 로드 중 오류:', error);
+      console.error("설정 로드 중 오류:", error);
     } finally {
       setIsLoading(false);
     }
@@ -50,24 +57,30 @@ const Settings = ({ isOpen, onClose }) => {
   const handleSave = async () => {
     try {
       setIsSaving(true);
-      
+
       // 포모도로 설정 저장
-      const pomodoroResponse = await fetch('http://localhost:3001/api/settings/pomodoro', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ pomodoroSettings: settings.pomodoro }),
-      });
+      const pomodoroResponse = await fetch(
+        "http://localhost:3001/api/settings/pomodoro",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ pomodoroSettings: settings.pomodoro }),
+        }
+      );
 
       // 차단 스케줄 설정 저장
-      const blockResponse = await fetch('http://localhost:3001/api/settings/block-schedule', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(settings.block),
-      });
+      const blockResponse = await fetch(
+        "http://localhost:3001/api/settings/block-schedule",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(settings.block),
+        }
+      );
 
       if (pomodoroResponse.ok && blockResponse.ok) {
         setSavedMessage("설정이 저장되었습니다!");
@@ -77,7 +90,7 @@ const Settings = ({ isOpen, onClose }) => {
         setTimeout(() => setSavedMessage(""), 3000);
       }
     } catch (error) {
-      console.error('설정 저장 중 오류:', error);
+      console.error("설정 저장 중 오류:", error);
       setSavedMessage("설정 저장 중 오류가 발생했습니다.");
       setTimeout(() => setSavedMessage(""), 3000);
     } finally {
@@ -86,7 +99,7 @@ const Settings = ({ isOpen, onClose }) => {
   };
 
   const handlePomodoroChange = (field, value) => {
-    setSettings(prev => ({
+    setSettings((prev) => ({
       ...prev,
       pomodoro: {
         ...prev.pomodoro,
@@ -96,7 +109,7 @@ const Settings = ({ isOpen, onClose }) => {
   };
 
   const handleBlockChange = (field, value) => {
-    setSettings(prev => ({
+    setSettings((prev) => ({
       ...prev,
       block: {
         ...prev.block,
@@ -106,12 +119,12 @@ const Settings = ({ isOpen, onClose }) => {
   };
 
   const handleDayToggle = (day) => {
-    setSettings(prev => ({
+    setSettings((prev) => ({
       ...prev,
       block: {
         ...prev.block,
         days: prev.block.days.includes(day)
-          ? prev.block.days.filter(d => d !== day)
+          ? prev.block.days.filter((d) => d !== day)
           : [...prev.block.days, day],
       },
     }));
@@ -131,7 +144,7 @@ const Settings = ({ isOpen, onClose }) => {
         <div className="p-6">
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
-              <Settings size={24} />
+              <SettingsIcon size={24} />
               설정
             </h2>
             <button
@@ -174,19 +187,50 @@ const Settings = ({ isOpen, onClose }) => {
               {/* 탭 컨텐츠 */}
               <div className="min-h-[400px]">
                 {activeTab === "api" && (
-                  <APISettings isOpen={true} onClose={() => {}} aiServices={[
-                    { id: "claude", name: "Claude", description: "Anthropic Claude", icon: "🤖" },
-                    { id: "gpt", name: "GPT", description: "OpenAI GPT", icon: "🧠" },
-                    { id: "groq", name: "Groq", description: "Groq LLM", icon: "⚡" },
-                    { id: "perplexity", name: "Perplexity", description: "Perplexity AI", icon: "🔍" },
-                    { id: "gemini", name: "Gemini", description: "Google Gemini", icon: "💎" },
-                  ]} />
+                  <APISettings
+                    isOpen={true}
+                    onClose={() => {}}
+                    aiServices={[
+                      {
+                        id: "claude",
+                        name: "Claude",
+                        description: "Anthropic Claude",
+                        icon: "🤖",
+                      },
+                      {
+                        id: "gpt",
+                        name: "GPT",
+                        description: "OpenAI GPT",
+                        icon: "🧠",
+                      },
+                      {
+                        id: "groq",
+                        name: "Groq",
+                        description: "Groq LLM",
+                        icon: "⚡",
+                      },
+                      {
+                        id: "perplexity",
+                        name: "Perplexity",
+                        description: "Perplexity AI",
+                        icon: "🔍",
+                      },
+                      {
+                        id: "gemini",
+                        name: "Gemini",
+                        description: "Google Gemini",
+                        icon: "💎",
+                      },
+                    ]}
+                  />
                 )}
 
                 {activeTab === "pomodoro" && (
                   <div className="space-y-6">
-                    <h3 className="text-lg font-semibold text-gray-800">포모도로 타이머 설정</h3>
-                    
+                    <h3 className="text-lg font-semibold text-gray-800">
+                      포모도로 타이머 설정
+                    </h3>
+
                     <div className="grid grid-cols-2 gap-4">
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -197,11 +241,13 @@ const Settings = ({ isOpen, onClose }) => {
                           min="1"
                           max="120"
                           value={settings.pomodoro.workTime}
-                          onChange={(e) => handlePomodoroChange("workTime", e.target.value)}
+                          onChange={(e) =>
+                            handlePomodoroChange("workTime", e.target.value)
+                          }
                           className="w-full p-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                         />
                       </div>
-                      
+
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">
                           짧은 휴식 (분)
@@ -211,11 +257,13 @@ const Settings = ({ isOpen, onClose }) => {
                           min="1"
                           max="30"
                           value={settings.pomodoro.shortBreak}
-                          onChange={(e) => handlePomodoroChange("shortBreak", e.target.value)}
+                          onChange={(e) =>
+                            handlePomodoroChange("shortBreak", e.target.value)
+                          }
                           className="w-full p-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                         />
                       </div>
-                      
+
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">
                           긴 휴식 (분)
@@ -225,11 +273,13 @@ const Settings = ({ isOpen, onClose }) => {
                           min="1"
                           max="60"
                           value={settings.pomodoro.longBreak}
-                          onChange={(e) => handlePomodoroChange("longBreak", e.target.value)}
+                          onChange={(e) =>
+                            handlePomodoroChange("longBreak", e.target.value)
+                          }
                           className="w-full p-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                         />
                       </div>
-                      
+
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">
                           긴 휴식 간격 (세션 수)
@@ -239,7 +289,12 @@ const Settings = ({ isOpen, onClose }) => {
                           min="1"
                           max="10"
                           value={settings.pomodoro.longBreakInterval}
-                          onChange={(e) => handlePomodoroChange("longBreakInterval", e.target.value)}
+                          onChange={(e) =>
+                            handlePomodoroChange(
+                              "longBreakInterval",
+                              e.target.value
+                            )
+                          }
                           className="w-full p-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                         />
                       </div>
@@ -249,8 +304,10 @@ const Settings = ({ isOpen, onClose }) => {
 
                 {activeTab === "block" && (
                   <div className="space-y-6">
-                    <h3 className="text-lg font-semibold text-gray-800">집중 모드 차단 설정</h3>
-                    
+                    <h3 className="text-lg font-semibold text-gray-800">
+                      집중 모드 차단 설정
+                    </h3>
+
                     <div className="grid grid-cols-2 gap-4">
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -259,11 +316,13 @@ const Settings = ({ isOpen, onClose }) => {
                         <input
                           type="time"
                           value={settings.block.startTime}
-                          onChange={(e) => handleBlockChange("startTime", e.target.value)}
+                          onChange={(e) =>
+                            handleBlockChange("startTime", e.target.value)
+                          }
                           className="w-full p-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                         />
                       </div>
-                      
+
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">
                           종료 시간
@@ -271,30 +330,34 @@ const Settings = ({ isOpen, onClose }) => {
                         <input
                           type="time"
                           value={settings.block.endTime}
-                          onChange={(e) => handleBlockChange("endTime", e.target.value)}
+                          onChange={(e) =>
+                            handleBlockChange("endTime", e.target.value)
+                          }
                           className="w-full p-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                         />
                       </div>
                     </div>
-                    
+
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
                         차단 요일
                       </label>
                       <div className="flex flex-wrap gap-2">
-                        {["일", "월", "화", "수", "목", "금", "토"].map((day) => (
-                          <button
-                            key={day}
-                            onClick={() => handleDayToggle(day)}
-                            className={`px-3 py-1 rounded-full text-sm font-medium ${
-                              settings.block.days.includes(day)
-                                ? "bg-blue-500 text-white"
-                                : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-                            }`}
-                          >
-                            {day}
-                          </button>
-                        ))}
+                        {["일", "월", "화", "수", "목", "금", "토"].map(
+                          (day) => (
+                            <button
+                              key={day}
+                              onClick={() => handleDayToggle(day)}
+                              className={`px-3 py-1 rounded-full text-sm font-medium ${
+                                settings.block.days.includes(day)
+                                  ? "bg-blue-500 text-white"
+                                  : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+                              }`}
+                            >
+                              {day}
+                            </button>
+                          )
+                        )}
                       </div>
                     </div>
                   </div>
@@ -342,4 +405,4 @@ const Settings = ({ isOpen, onClose }) => {
   );
 };
 
-export default Settings; 
+export default Settings;
