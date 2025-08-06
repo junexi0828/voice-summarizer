@@ -3,13 +3,47 @@ import "./App.css";
 import VoiceTextSummarizer from "./components/VoiceTextSummarizer";
 import PomodoroTimer from "./components/PomodoroTimer";
 import BlockPage from "./components/BlockPage";
-import Settings from "./components/Settings";
+import APISettings from "./components/APISettings";
 import Navigation from "./components/Navigation";
 import { AuthProvider } from "./components/AuthProvider";
 
 function App() {
   const [currentPage, setCurrentPage] = useState("home");
   const [showSettings, setShowSettings] = useState(false);
+
+  // AI 서비스 목록
+  const aiServices = [
+    {
+      id: "claude",
+      name: "Claude",
+      description: "Anthropic의 Claude AI 서비스",
+      icon: "🤖",
+    },
+    {
+      id: "gpt",
+      name: "GPT",
+      description: "OpenAI의 GPT 서비스",
+      icon: "🧠",
+    },
+    {
+      id: "groq",
+      name: "Groq",
+      description: "Groq의 고속 AI 서비스",
+      icon: "⚡",
+    },
+    {
+      id: "perplexity",
+      name: "Perplexity",
+      description: "Perplexity AI 서비스",
+      icon: "🔍",
+    },
+    {
+      id: "gemini",
+      name: "Gemini",
+      description: "Google의 Gemini AI 서비스",
+      icon: "🌟",
+    },
+  ];
 
   const renderPage = () => {
     switch (currentPage) {
@@ -43,7 +77,11 @@ function App() {
         <main>{renderPage()}</main>
 
         {/* 설정 모달 */}
-        <Settings isOpen={showSettings} onClose={() => setShowSettings(false)} />
+        <APISettings
+          isOpen={showSettings}
+          onClose={() => setShowSettings(false)}
+          aiServices={aiServices}
+        />
 
         {/* 글로벌 푸터 */}
         <footer className="bg-gray-800 text-white py-8 mt-0">
