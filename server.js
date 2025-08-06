@@ -1287,6 +1287,107 @@ app.get("/api/settings/block-history", (req, res) => {
   }
 });
 
+// API 키 설정 저장
+app.post("/api/settings/api-keys", (req, res) => {
+  try {
+    const { apiKeys } = req.body;
+    
+    // API 키 유효성 검증
+    const validationErrors = {};
+    if (apiKeys && typeof apiKeys === "object") {
+      Object.entries(apiKeys).forEach(([serviceId, key]) => {
+        if (key && key.trim() && !isValidAPIKey(serviceId, key.trim())) {
+          validationErrors[serviceId] = getValidationMessage(serviceId);
+        }
+      });
+    }
+
+    if (Object.keys(validationErrors).length > 0) {
+      return res.status(400).json({
+        success: false,
+        error: "API 키 형식이 올바르지 않습니다.",
+        validationErrors,
+      });
+    }
+
+    // API 키들을 사용자 설정에 저장
+    userSettings.apiKeys = apiKeys || {};
+    saveUserSettings();
+
+    log("INFO", `API 키 설정 저장 완료 (${Object.keys(apiKeys || {}).length}개 서비스)`);
+
+    res.json({
+      success: true,
+      message: "API 키가 저장되었습니다.",
+      apiKeys: userSettings.apiKeys,
+    });
+  } catch (error) {
+    log("ERROR", `API 키 설정 저장 실패: ${error.message}`);
+    res.status(500).json({
+      success: false,
+      error: error.message,
+    });
+  }
+});
+
+// API 키 설정 조회
+app.get("/api/settings/api-keys", (req, res) => {
+  try {
+    res.json({
+      success: true,
+      apiKeys: userSettings.apiKeys || {},
+    });
+  } catch (error) {
+    log("ERROR", `API 키 설정 조회 실패: ${error.message}`);
+    res.status(500).json({
+      success: false,
+      error: error.message,
+    });
+  }
+});
+
+// API 키 유효성 검증 함수
+function isValidAPIKey(serviceId, apiKey) {
+  if (!apiKey || typeof apiKey !== "string") return false;
+
+  const trimmedKey = apiKey.trim();
+  if (trimmedKey.length === 0) return false;
+
+  // 서비스별 API 키 형식 검증
+  switch (serviceId) {
+    case "claude":
+      return trimmedKey.startsWith("sk-ant-");
+    case "gpt":
+      return trimmedKey.startsWith("sk-");
+    case "groq":
+      return trimmedKey.startsWith("gsk_");
+    case "perplexity":
+      return trimmedKey.startsWith("pplx-");
+    case "gemini":
+      return trimmedKey.length > 20; // Google API 키는 일반적으로 길이가 김
+    default:
+      return trimmedKey.length > 10; // 기본 검증
+  }
+}
+
+// 검증 메시지 함수
+function getValidationMessage(serviceId) {
+  switch (serviceId) {
+    case "claude":
+      return 'Claude API 키는 "sk-ant-"로 시작해야 합니다.';
+    case "gpt":
+      return 'GPT API 키는 "sk-"로 시작해야 합니다.';
+    case "groq":
+      return 'Groq API 키는 "gsk_"로 시작해야 합니다.';
+    case "perplexity":
+      return 'Perplexity API 키는 "pplx-"로 시작해야 합니다.';
+    case "gemini":
+      return "Gemini API 키는 20자 이상이어야 합니다.";
+    default:
+      return "API 키 형식이 올바르지 않습니다.";
+  }
+}
+
 // 설정 초기화
 app.post("/api/settings/reset", (req, res) => {
   try {
@@ -1304,6 +1405,7 @@ app.post("/api/settings/reset", (req, res) => {
         longBreakInterval: 4,
       },
       blockHistory: [],
+      apiKeys: {},
     };
 
     saveUserSettings();
@@ -1399,6 +1501,8 @@ app.listen(PORT, "0.0.0.0", () => {
   log("INFO", `- GET  /api/block/sites - 차단 사이트 목록`);
   log("INFO", `설정 관리 API:`);
   log("INFO", `- GET  /api/settings - 전체 설정 조회`);
+  log("INFO", `- GET  /api/settings/api-keys - API 키 설정 조회`);
+  log("INFO", `- POST /api/settings/api-keys - API 키 설정 저장`);
   log("INFO", `- POST /api/settings/blocked-sites - 차단 사이트 설정 저장`);
   log("INFO", `- POST /api/settings/block-schedule - 차단 스케줄 설정 저장`);
   log("INFO", `- POST /api/settings/pomodoro - 포모도로 설정 저장`);

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Settings, Eye, EyeOff, Save, Key } from "lucide-react";
+import { Settings, Eye, EyeOff, Save, Key, Loader2 } from "lucide-react";
 import { X } from "lucide-react";
 
 const APISettings = ({ isOpen, onClose, aiServices }) => {
@@ -7,9 +7,41 @@ const APISettings = ({ isOpen, onClose, aiServices }) => {
   const [showKeys, setShowKeys] = useState({});
   const [savedMessage, setSavedMessage] = useState("");
   const [validationErrors, setValidationErrors] = useState({});
+  const [isLoading, setIsLoading] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
-    // 저장된 API 키 불러오기
+    if (isOpen) {
+      loadApiKeys();
+    }
+  }, [isOpen, aiServices]);
+
+  // API 키 불러오기
+  const loadApiKeys = async () => {
+    try {
+      setIsLoading(true);
+      const response = await fetch('http://localhost:3001/api/settings/api-keys');
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) {
+          setApiKeys(data.apiKeys || {});
+        }
+      } else {
+        console.error('API 키 로드 실패:', response.statusText);
+        // 로드 실패시 로컬스토리지에서 불러오기 (fallback)
+        loadFromLocalStorage();
+      }
+    } catch (error) {
+      console.error('API 키 로드 중 오류:', error);
+      // 오류시 로컬스토리지에서 불러오기 (fallback)
+      loadFromLocalStorage();
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // 로컬스토리지에서 API 키 불러오기 (fallback)
+  const loadFromLocalStorage = () => {
     const savedKeys = {};
     if (aiServices && Array.isArray(aiServices)) {
       aiServices.forEach((service) => {
@@ -20,36 +52,62 @@ const APISettings = ({ isOpen, onClose, aiServices }) => {
       });
     }
     setApiKeys(savedKeys);
-  }, [aiServices]);
+  };
 
-  const handleSave = () => {
-    // API 키 유효성 검증
-    const errors = {};
-    if (apiKeys && typeof apiKeys === "object") {
-      Object.entries(apiKeys).forEach(([serviceId, key]) => {
-        if (key && key.trim() && !isValidAPIKey(serviceId, key.trim())) {
-          errors[serviceId] = getValidationMessage(serviceId);
-        }
+  const handleSave = async () => {
+    try {
+      setIsSaving(true);
+      setValidationErrors({});
+
+      // API 키들을 백엔드 서버에 저장
+      const response = await fetch('http://localhost:3001/api/settings/api-keys', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ apiKeys }),
       });
-    }
 
-    if (Object.keys(errors).length > 0) {
-      setValidationErrors(errors);
-      return;
-    }
+      const data = await response.json();
 
-    // API 키들을 localStorage에 저장
-    if (apiKeys && typeof apiKeys === "object") {
-      Object.entries(apiKeys).forEach(([serviceId, key]) => {
-        if (key && key.trim()) {
-          localStorage.setItem(`${serviceId}_api_key`, key.trim());
+      if (response.ok && data.success) {
+        // 성공시 로컬스토리지에도 저장 (fallback용)
+        if (apiKeys && typeof apiKeys === "object") {
+          Object.entries(apiKeys).forEach(([serviceId, key]) => {
+            if (key && key.trim()) {
+              localStorage.setItem(`${serviceId}_api_key`, key.trim());
+            }
+          });
         }
-      });
+        
+        setSavedMessage("API 키가 서버에 저장되었습니다!");
+        setTimeout(() => setSavedMessage(""), 3000);
+      } else {
+        // 서버에서 유효성 검증 오류가 발생한 경우
+        if (data.validationErrors) {
+          setValidationErrors(data.validationErrors);
+        } else {
+          setSavedMessage(`저장 실패: ${data.error || '알 수 없는 오류'}`);
+          setTimeout(() => setSavedMessage(""), 3000);
+        }
+      }
+    } catch (error) {
+      console.error('API 키 저장 중 오류:', error);
+      
+      // 네트워크 오류시 로컬스토리지에 저장 (fallback)
+      if (apiKeys && typeof apiKeys === "object") {
+        Object.entries(apiKeys).forEach(([serviceId, key]) => {
+          if (key && key.trim()) {
+            localStorage.setItem(`${serviceId}_api_key`, key.trim());
+          }
+        });
+      }
+      
+      setSavedMessage("네트워크 오류로 로컬에만 저장되었습니다.");
+      setTimeout(() => setSavedMessage(""), 3000);
+    } finally {
+      setIsSaving(false);
     }
-
-    setValidationErrors({});
-    setSavedMessage("API 키가 저장되었습니다!");
-    setTimeout(() => setSavedMessage(""), 3000);
   };
 
   // API 키 형식 검증 함수
@@ -95,12 +153,26 @@ const APISettings = ({ isOpen, onClose, aiServices }) => {
   };
 
   // API 키 삭제 함수
-  const handleDeleteKey = (serviceId) => {
-    setApiKeys((prev) => ({
-      ...prev,
+  const handleDeleteKey = async (serviceId) => {
+    const updatedKeys = {
+      ...apiKeys,
       [serviceId]: "",
-    }));
+    };
+    setApiKeys(updatedKeys);
     localStorage.removeItem(`${serviceId}_api_key`);
+    
+    // 서버에도 업데이트된 키들을 저장
+    try {
+      await fetch('http://localhost:3001/api/settings/api-keys', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ apiKeys: updatedKeys }),
+      });
+    } catch (error) {
+      console.error('API 키 삭제 중 서버 업데이트 실패:', error);
+    }
   };
 
   const handleKeyChange = (serviceId, value) => {
@@ -117,26 +189,25 @@ const APISettings = ({ isOpen, onClose, aiServices }) => {
     }));
   };
 
+  // Settings 컴포넌트 내에서 사용될 때는 모달 구조를 제거
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
-        <div className="p-6">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
-              <Settings size={24} />
-              AI 서비스 API 키 설정
-            </h2>
-            <button
-              onClick={onClose}
-              className="text-gray-500 hover:text-gray-700"
-            >
-              ✕
-            </button>
-          </div>
+    <div className="space-y-6">
+      <div className="flex items-center justify-between mb-6">
+        <h3 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
+          <Settings size={20} />
+          AI 서비스 API 키 설정
+        </h3>
+      </div>
 
-          <div className="space-y-6">
+          {isLoading ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="animate-spin h-8 w-8 text-blue-600" />
+              <span className="ml-2 text-gray-600">설정을 불러오는 중...</span>
+            </div>
+          ) : (
+            <div className="space-y-6">
             {aiServices &&
               Array.isArray(aiServices) &&
               aiServices.map((service) => (
@@ -218,7 +289,8 @@ const APISettings = ({ isOpen, onClose, aiServices }) => {
                   </div>
                 </div>
               ))}
-          </div>
+            </div>
+          )}
 
           {savedMessage && (
             <div className="mt-4 p-3 bg-green-100 border border-green-400 text-green-700 rounded">
@@ -228,25 +300,38 @@ const APISettings = ({ isOpen, onClose, aiServices }) => {
 
           {/* 안내문구 */}
           <div className="mt-6 text-xs text-gray-500 text-center">
-            ⚠️ 입력하신 API 키는 <b>브라우저(로컬)</b>에만 저장되며, 서버로
-            전송되지 않습니다.
+            💾 입력하신 API 키는 <b>서버에 안전하게 저장</b>되며, 로컬에도 백업됩니다.
           </div>
 
-          <div className="mt-6 flex justify-end gap-3">
-            <button
-              onClick={onClose}
-              className="px-4 py-2 text-gray-600 hover:text-gray-800"
-            >
-              취소
-            </button>
-            <button
-              onClick={handleSave}
-              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-            >
-              <Save size={16} />
-              저장
-            </button>
-          </div>
+          {/* Settings 컴포넌트 내에서 사용될 때는 저장 버튼 숨김 */}
+          {onClose && (
+            <div className="mt-6 flex justify-end gap-3">
+              <button
+                onClick={onClose}
+                className="px-4 py-2 text-gray-600 hover:text-gray-800"
+                disabled={isSaving}
+              >
+                취소
+              </button>
+              <button
+                onClick={handleSave}
+                disabled={isSaving}
+                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
+              >
+                {isSaving ? (
+                  <>
+                    <Loader2 className="animate-spin h-4 w-4" />
+                    저장 중...
+                  </>
+                ) : (
+                  <>
+                    <Save size={16} />
+                    저장
+                  </>
+                )}
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </div>

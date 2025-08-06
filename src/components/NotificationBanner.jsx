@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { CheckCircle, AlertTriangle, Info, X, Bell } from "lucide-react";
+import { CheckCircle, AlertTriangle, Info, X } from "lucide-react";
 
 const NotificationBanner = ({
   message,

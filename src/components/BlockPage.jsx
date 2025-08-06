@@ -152,6 +152,7 @@ const BlockPage = () => {
     setBlockedSites(defaultBlockedSites);
     // 페이지 로드 시 백엔드에서 차단 상태 가져오기
     fetchBlockStatus();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [defaultBlockedSites]); // fetchBlockStatus 제거하여 무한 루프 방지
 
   // 알고리즘 문제 풀이 제출

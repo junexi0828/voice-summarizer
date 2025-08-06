@@ -3,7 +3,7 @@ import "./App.css";
 import VoiceTextSummarizer from "./components/VoiceTextSummarizer";
 import PomodoroTimer from "./components/PomodoroTimer";
 import BlockPage from "./components/BlockPage";
-import APISettings from "./components/APISettings";
+import Settings from "./components/Settings";
 import Navigation from "./components/Navigation";
 import { AuthProvider } from "./components/AuthProvider";
 
@@ -19,8 +19,6 @@ function App() {
         return <PomodoroTimer />;
       case "block":
         return <BlockPage />;
-      case "settings":
-        return <APISettings />;
       default:
         return <VoiceTextSummarizer />;
     }
@@ -45,24 +43,7 @@ function App() {
         <main>{renderPage()}</main>
 
         {/* 설정 모달 */}
-        {showSettings && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-              <div className="p-6">
-                <div className="flex items-center justify-between mb-6">
-                  <h2 className="text-2xl font-bold text-gray-800">설정</h2>
-                  <button
-                    onClick={() => setShowSettings(false)}
-                    className="text-gray-500 hover:text-gray-700 text-2xl"
-                  >
-                    ×
-                  </button>
-                </div>
-                <APISettings />
-              </div>
-            </div>
-          </div>
-        )}
+        <Settings isOpen={showSettings} onClose={() => setShowSettings(false)} />
 
         {/* 글로벌 푸터 */}
         <footer className="bg-gray-800 text-white py-8 mt-0">
