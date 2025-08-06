@@ -1390,7 +1390,7 @@ app.get("/api/algorithm/random-problem/:difficulty", (req, res) => {
 });
 
 // 서버 시작
-app.listen(PORT, () => {
+app.listen(PORT, "0.0.0.0", () => {
   log("INFO", `차단 서버가 포트 ${PORT}에서 실행 중입니다.`);
   log("INFO", `API 엔드포인트:`);
   log("INFO", `- GET  /api/status - 현재 상태 조회`);
