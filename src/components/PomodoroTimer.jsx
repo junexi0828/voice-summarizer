@@ -32,60 +32,58 @@ const PomodoroTimer = () => {
 
   const intervalRef = useRef(null);
 
-  // 알림음 재생 (Web Audio API 사용)
+  // F1 무전 알림음 재생
   const playNotificationSound = useCallback(() => {
     if (isMuted) return;
 
     try {
       const audioContext = new (window.AudioContext ||
         window.webkitAudioContext)();
-      const oscillator = audioContext.createOscillator();
-      const gainNode = audioContext.createGain();
 
-      oscillator.connect(gainNode);
-      gainNode.connect(audioContext.destination);
+      // F1 무전음 패턴: 삐-삐-삐 (3번의 짧은 비프음)
+      const playBeep = (frequency, startTime, duration) => {
+        const oscillator = audioContext.createOscillator();
+        const gainNode = audioContext.createGain();
 
-      // 알림음 설정
-      oscillator.frequency.setValueAtTime(800, audioContext.currentTime); // 800Hz
-      oscillator.type = "sine";
+        oscillator.connect(gainNode);
+        gainNode.connect(audioContext.destination);
 
-      // 볼륨 페이드 인/아웃
-      gainNode.gain.setValueAtTime(0, audioContext.currentTime);
-      gainNode.gain.linearRampToValueAtTime(
-        0.3,
-        audioContext.currentTime + 0.1
-      );
-      gainNode.gain.linearRampToValueAtTime(0, audioContext.currentTime + 0.5);
-
-      oscillator.start(audioContext.currentTime);
-      oscillator.stop(audioContext.currentTime + 0.5);
-
-      // 두 번째 알림음 (더 높은 톤)
-      setTimeout(() => {
-        const oscillator2 = audioContext.createOscillator();
-        const gainNode2 = audioContext.createGain();
-
-        oscillator2.connect(gainNode2);
-        gainNode2.connect(audioContext.destination);
-
-        oscillator2.frequency.setValueAtTime(1000, audioContext.currentTime);
-        oscillator2.type = "sine";
-
-        gainNode2.gain.setValueAtTime(0, audioContext.currentTime);
-        gainNode2.gain.linearRampToValueAtTime(
-          0.3,
-          audioContext.currentTime + 0.1
+        // F1 무전 특유의 톤 (1500Hz)
+        oscillator.frequency.setValueAtTime(
+          frequency,
+          audioContext.currentTime
         );
-        gainNode2.gain.linearRampToValueAtTime(
+        oscillator.type = "square"; // 사각파로 더 날카로운 소리
+
+        // 볼륨 설정 (F1 무전처럼 날카롭게)
+        gainNode.gain.setValueAtTime(0, audioContext.currentTime);
+        gainNode.gain.linearRampToValueAtTime(
+          0.4,
+          audioContext.currentTime + 0.05
+        );
+        gainNode.gain.linearRampToValueAtTime(
+          0.4,
+          audioContext.currentTime + duration - 0.05
+        );
+        gainNode.gain.linearRampToValueAtTime(
           0,
-          audioContext.currentTime + 0.5
+          audioContext.currentTime + duration
         );
 
-        oscillator2.start(audioContext.currentTime);
-        oscillator2.stop(audioContext.currentTime + 0.5);
-      }, 200);
+        oscillator.start(audioContext.currentTime + startTime);
+        oscillator.stop(audioContext.currentTime + startTime + duration);
+      };
+
+      // 첫 번째 비프음
+      playBeep(1500, 0, 0.2);
+
+      // 두 번째 비프음 (0.3초 후)
+      playBeep(1500, 0.3, 0.2);
+
+      // 세 번째 비프음 (0.6초 후)
+      playBeep(1500, 0.6, 0.2);
     } catch (error) {
-      console.log("알림음 재생 실패:", error);
+      console.log("F1 무전 알림음 재생 실패:", error);
     }
   }, [isMuted]);
 
@@ -303,9 +301,9 @@ const PomodoroTimer = () => {
 
             <button
               onClick={playNotificationSound}
-              className="flex items-center gap-2 px-4 py-3 bg-orange-600 hover:bg-orange-700 text-white rounded-lg font-medium transition-all"
+              className="flex items-center gap-2 px-4 py-3 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition-all"
             >
-              🔔 테스트
+              🏎️ F1 무전
             </button>
 
             <button
