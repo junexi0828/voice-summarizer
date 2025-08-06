@@ -1,8 +1,27 @@
 const express = require("express");
 const cors = require("cors");
-const fs = require("fs");
 const { exec } = require("child_process");
+const fs = require("fs");
 const path = require("path");
+const { PythonShell } = require("python-shell");
+
+// 알고리즘 문제 시스템 - Python API 연동
+
+const ProblemDifficulty = {
+  EASY: "EASY",
+  MEDIUM: "MEDIUM",
+  HARD: "HARD",
+};
+
+const ProblemTag = {
+  ARRAY: "ARRAY",
+  MATH: "MATH",
+  BRUTE_FORCE: "BRUTE_FORCE",
+  BINARY_SEARCH: "BINARY_SEARCH",
+  STRING: "STRING",
+  TWO_POINTERS: "TWO_POINTERS",
+  DYNAMIC_PROGRAMMING: "DYNAMIC_PROGRAMMING",
+};
 
 const app = express();
 const PORT = 3001;
@@ -83,6 +102,7 @@ const CONFIG = {
 
 // 상태 관리
 let isBlockingEnabled = false;
+let isScheduleActive = false; // 스케줄 활성화 상태
 let blockStats = {
   totalBlocks: 0,
   todayBlocks: 0,
@@ -154,8 +174,120 @@ function loadUserSettings() {
   }
 }
 
+// 스케줄 체크 함수
+function checkSchedule() {
+  const now = new Date();
+  const currentTime = now.toTimeString().slice(0, 5); // HH:MM 형식
+  const currentDay = ["일", "월", "화", "수", "목", "금", "토"][now.getDay()];
+
+  const { startTime, endTime, days } = userSettings.blockSchedule;
+
+  // 현재 요일이 스케줄에 포함되어 있는지 확인
+  const isScheduledDay = days.includes(currentDay);
+
+  // 현재 시간이 스케줄 시간 범위에 있는지 확인
+  const isScheduledTime = currentTime >= startTime && currentTime <= endTime;
+
+  const shouldBeBlocked = isScheduledDay && isScheduledTime;
+
+  // 스케줄 상태가 변경되었는지 확인
+  if (shouldBeBlocked && !isScheduleActive) {
+    log("INFO", `스케줄 차단 시작: ${currentDay} ${currentTime}`);
+    isScheduleActive = true;
+    // 스케줄에 의한 차단 시작
+    startScheduledBlocking();
+  } else if (!shouldBeBlocked && isScheduleActive) {
+    log("INFO", `스케줄 차단 종료: ${currentDay} ${currentTime}`);
+    isScheduleActive = false;
+    // 스케줄에 의한 차단 종료
+    stopScheduledBlocking();
+  }
+}
+
+// 스케줄에 의한 차단 시작
+async function startScheduledBlocking() {
+  if (!isBlockingEnabled) {
+    try {
+      log("INFO", "🚀 스케줄 차단 시작");
+
+      // hosts 파일 차단
+      const blockSuccess = blockWebsites();
+      if (!blockSuccess) {
+        log("ERROR", "스케줄 차단: hosts 파일 차단 실패");
+        return;
+      }
+
+      // 브라우저 재시작
+      await browserManager.restartBrowsersForBlocking();
+
+      // 상태 업데이트
+      isBlockingEnabled = true;
+      blockStats.totalBlocks++;
+      blockStats.todayBlocks++;
+
+      // 차단 히스토리 저장
+      userSettings.blockHistory.push({
+        action: "스케줄 차단 시작",
+        timestamp: new Date().toISOString(),
+        details: {
+          schedule: userSettings.blockSchedule,
+        },
+      });
+      saveUserSettings();
+
+      log("INFO", "✅ 스케줄 차단 시작 완료");
+    } catch (error) {
+      log("ERROR", `스케줄 차단 시작 실패: ${error.message}`);
+    }
+  }
+}
+
+// 스케줄에 의한 차단 종료
+async function stopScheduledBlocking() {
+  if (isBlockingEnabled) {
+    try {
+      log("INFO", "🛑 스케줄 차단 종료");
+
+      // hosts 파일 차단 해제
+      const unblockSuccess = unblockWebsites();
+      if (!unblockSuccess) {
+        log("ERROR", "스케줄 차단 해제: hosts 파일 차단 해제 실패");
+        return;
+      }
+
+      // 브라우저 새로고침
+      await browserManager.refreshBrowsersForUnblocking();
+
+      // 상태 업데이트
+      isBlockingEnabled = false;
+
+      // 차단 히스토리 저장
+      userSettings.blockHistory.push({
+        action: "스케줄 차단 종료",
+        timestamp: new Date().toISOString(),
+        details: {
+          schedule: userSettings.blockSchedule,
+        },
+      });
+      saveUserSettings();
+
+      log("INFO", "✅ 스케줄 차단 종료 완료");
+    } catch (error) {
+      log("ERROR", `스케줄 차단 종료 실패: ${error.message}`);
+    }
+  }
+}
+
 // 서버 시작 시 설정 로드
 loadUserSettings();
+
+// 스케줄 체크 타이머 (1분마다 체크)
+setInterval(() => {
+  checkSchedule();
+}, 60000); // 60초 = 1분
+
+// 서버 시작 시 즉시 스케줄 체크
+checkSchedule();
 
 // ----- 브라우저 관리 시스템 -----
 class BrowserManager {
@@ -517,6 +649,180 @@ function unblockWebsites() {
   }
 }
 
+// 코드 실행 및 검증 함수
+function executeCode(code, testCases) {
+  return new Promise((resolve, reject) => {
+    const tempFile = path.join(__dirname, "temp_solution.py");
+
+    try {
+      // 임시 파일에 코드 작성
+      fs.writeFileSync(tempFile, code);
+
+      let passedTests = 0;
+      const results = [];
+
+      // 각 테스트 케이스 실행
+      const runTest = (index) => {
+        if (index >= testCases.length) {
+          // 모든 테스트 완료
+          fs.unlinkSync(tempFile); // 임시 파일 삭제
+          resolve({
+            passed: passedTests,
+            total: testCases.length,
+            success: passedTests === testCases.length,
+            results: results,
+          });
+          return;
+        }
+
+        const testCase = testCases[index];
+        const command = `echo "${testCase.input}" | python3 ${tempFile}`;
+
+        exec(command, { timeout: 5000 }, (error, stdout, stderr) => {
+          const output = stdout.trim();
+          const isCorrect = output === testCase.output;
+
+          results.push({
+            input: testCase.input,
+            expected: testCase.output,
+            actual: output,
+            passed: isCorrect,
+            error: error ? error.message : null,
+          });
+
+          if (isCorrect) {
+            passedTests++;
+          }
+
+          // 다음 테스트 케이스 실행
+          runTest(index + 1);
+        });
+      };
+
+      runTest(0);
+    } catch (error) {
+      if (fs.existsSync(tempFile)) {
+        fs.unlinkSync(tempFile);
+      }
+      reject(error);
+    }
+  });
+}
+
+// Python API를 통한 실제 알고리즘 문제 가져오기
+function getRandomProblemFromAPI(difficulty = null) {
+  return new Promise((resolve, reject) => {
+    const options = {
+      mode: "text", // JSON 모드 대신 텍스트 모드 사용
+      pythonPath: "python3",
+      pythonOptions: ["-u"], // unbuffered output
+      scriptPath: "./algorithm",
+      args: ["--difficulty", difficulty || "RANDOM"],
+    };
+
+    PythonShell.run("get_random_problem.py", options, (err, results) => {
+      if (err) {
+        console.error("Python API 실행 오류:", err);
+        // API 실패시 기본 문제 반환
+        resolve(getDefaultProblem(difficulty));
+        return;
+      }
+
+      if (results && results.length > 0) {
+        try {
+          // 결과를 JSON으로 파싱
+          const problem = JSON.parse(results[0]);
+          console.log(
+            `API에서 문제 가져옴: ${problem.title} (${
+              problem.platform || "Unknown"
+            })`
+          );
+          resolve(problem);
+        } catch (parseError) {
+          console.error("JSON 파싱 오류:", parseError);
+          console.error("원본 결과:", results[0]);
+          resolve(getDefaultProblem(difficulty));
+        }
+      } else {
+        resolve(getDefaultProblem(difficulty));
+      }
+    });
+  });
+}
+
+// 기본 문제 반환 (API 실패시 사용)
+function getDefaultProblem(difficulty = null) {
+  const defaultProblems = [
+    {
+      id: "easy_001",
+      title: "두 수의 합",
+      description: "두 정수를 입력받아 합을 출력하는 프로그램을 작성하세요.",
+      difficulty: "EASY",
+      platform: "LOCAL",
+      tags: ["ARRAY", "MATH"],
+      testCases: [
+        { input: "1 2", output: "3" },
+        { input: "5 3", output: "8" },
+        { input: "-1 1", output: "0" },
+      ],
+      solution: "a, b = map(int, input().split())\nprint(a + b)",
+    },
+    {
+      id: "medium_001",
+      title: "이진 탐색",
+      description:
+        "정렬된 배열에서 특정 값을 이진 탐색으로 찾는 프로그램을 작성하세요.",
+      difficulty: "MEDIUM",
+      platform: "LOCAL",
+      tags: ["ARRAY", "BINARY_SEARCH"],
+      testCases: [
+        { input: "5 3\n1 2 3 4 5", output: "2" },
+        { input: "5 6\n1 2 3 4 5", output: "-1" },
+        { input: "3 1\n1 2 3", output: "0" },
+      ],
+      solution: `def binary_search(arr, target):
+    left, right = 0, len(arr) - 1
+    while left <= right:
+        mid = (left + right) // 2
+        if arr[mid] == target:
+            return mid
+        elif arr[mid] < target:
+            left = mid + 1
+        else:
+            right = mid - 1
+    return -1
+
+n, target = map(int, input().split())
+arr = list(map(int, input().split()))
+print(binary_search(arr, target))`,
+    },
+  ];
+
+  let availableProblems = defaultProblems;
+  if (difficulty) {
+    availableProblems = defaultProblems.filter(
+      (p) => p.difficulty === difficulty
+    );
+  }
+
+  if (availableProblems.length === 0) {
+    availableProblems = defaultProblems;
+  }
+
+  const randomIndex = Math.floor(Math.random() * availableProblems.length);
+  return availableProblems[randomIndex];
+}
+
+// 랜덤 문제 선택 함수 (API 우선 사용)
+async function getRandomProblem(difficulty = null) {
+  try {
+    return await getRandomProblemFromAPI(difficulty);
+  } catch (error) {
+    console.error("API 호출 실패, 기본 문제 사용:", error);
+    return getDefaultProblem(difficulty);
+  }
+}
+
 // ----- API 라우트들 -----
 app.get("/api/status", (req, res) => {
   res.json({
@@ -528,16 +834,27 @@ app.get("/api/status", (req, res) => {
 
 // 차단 상태 확인 API (더 자세한 정보)
 app.get("/api/block/status", (req, res) => {
+  const now = new Date();
+  const currentTime = now.toTimeString().slice(0, 5);
+  const currentDay = ["일", "월", "화", "수", "목", "금", "토"][now.getDay()];
+
   res.json({
     success: true,
     isBlockingEnabled,
+    isScheduleActive,
     blockStats,
     userSettings: {
       blockedSites: userSettings.blockedSites,
       blockSchedule: userSettings.blockSchedule,
     },
+    currentInfo: {
+      currentDay,
+      currentTime,
+    },
     message: isBlockingEnabled
-      ? "차단 시스템이 활성화되어 있습니다."
+      ? isScheduleActive
+        ? "스케줄에 의한 차단이 활성화되어 있습니다."
+        : "차단 시스템이 활성화되어 있습니다."
       : "차단 시스템이 비활성화되어 있습니다.",
   });
 });
@@ -594,6 +911,91 @@ app.post("/api/block/stop", async (req, res) => {
   try {
     log("INFO", "🛑 차단 중지 요청 받음");
 
+    // 스케줄 활성화 중에는 차단 중지 불가
+    if (isScheduleActive) {
+      const now = new Date();
+      const currentTime = now.toTimeString().slice(0, 5);
+      const currentDay = ["일", "월", "화", "수", "목", "금", "토"][
+        now.getDay()
+      ];
+      const { endTime } = userSettings.blockSchedule;
+
+      return res.status(403).json({
+        success: false,
+        error: `스케줄 차단 시간 중입니다. ${currentDay} ${endTime}까지 차단이 유지됩니다.`,
+        scheduleInfo: {
+          currentDay,
+          currentTime,
+          endTime,
+          isScheduleActive: true,
+        },
+      });
+    }
+
+    // 알고리즘 문제 풀이 검증이 필요한 경우
+    const { code, problemId } = req.body;
+
+    if (!code || !problemId) {
+      // 문제 풀이 없이 요청한 경우, 랜덤 문제 제공
+      const problem = getRandomProblem();
+      return res.status(400).json({
+        success: false,
+        error: "차단 해제를 위해서는 알고리즘 문제를 풀어야 합니다.",
+        requiresProblem: true,
+        problem: {
+          id: problem.id,
+          title: problem.title,
+          description: problem.description,
+          difficulty: problem.difficulty,
+          tags: problem.tags || [],
+          testCases:
+            problem.testCases && Array.isArray(problem.testCases)
+              ? problem.testCases.map((tc) => ({
+                  input: tc.input || tc.input_data || "",
+                  output: tc.output || tc.expected_output || "",
+                }))
+              : [],
+        },
+      });
+    }
+
+    // 코드 실행 및 검증
+    const problem = algorithmProblems.find((p) => p.id === problemId);
+    if (!problem) {
+      return res.status(404).json({
+        success: false,
+        error: "문제를 찾을 수 없습니다.",
+      });
+    }
+
+    const result = await executeCode(code, problem.testCases);
+
+    if (!result.success) {
+      return res.status(400).json({
+        success: false,
+        error: `문제 풀이 실패! ${result.passed}/${result.total} 테스트 통과`,
+        requiresProblem: true,
+        problem: {
+          id: problem.id,
+          title: problem.title,
+          description: problem.description,
+          difficulty: problem.difficulty,
+          tags: problem.tags || [],
+          testCases:
+            problem.testCases && Array.isArray(problem.testCases)
+              ? problem.testCases.map((tc) => ({
+                  input: tc.input || tc.input_data || "",
+                  output: tc.output || tc.expected_output || "",
+                }))
+              : [],
+        },
+        testResults: result.results,
+      });
+    }
+
+    // 문제 풀이 성공 - 차단 해제 진행
+    log("INFO", "✅ 알고리즘 문제 풀이 성공 - 차단 해제 진행");
+
     // 1. hosts 파일 차단 해제
     log("INFO", "📝 hosts 파일 차단 해제 중...");
     const unblockSuccess = unblockWebsites();
@@ -612,10 +1014,12 @@ app.post("/api/block/stop", async (req, res) => {
 
     // 차단 히스토리 저장
     userSettings.blockHistory.push({
-      action: "차단 중지",
+      action: "차단 중지 (알고리즘 문제 풀이 성공)",
       timestamp: new Date().toISOString(),
       details: {
-        duration: "사용자 요청",
+        duration: "알고리즘 문제 풀이 성공",
+        problemSolved: problem.title,
+        testResults: result,
       },
     });
     saveUserSettings();
@@ -623,8 +1027,10 @@ app.post("/api/block/stop", async (req, res) => {
     log("INFO", "✅ 차단 중지 완료");
     res.json({
       success: true,
-      message: "집중 모드 차단이 중지되었습니다.",
+      message: "알고리즘 문제 풀이 성공! 집중 모드 차단이 중지되었습니다.",
       blockStats,
+      problemSolved: problem.title,
+      testResults: result,
     });
   } catch (error) {
     log("ERROR", `❌ 차단 중지 실패: ${error.message}`);
@@ -684,21 +1090,118 @@ app.post("/api/settings/blocked-sites", (req, res) => {
 });
 
 // 차단 스케줄 설정 저장
-app.post("/api/settings/block-schedule", (req, res) => {
+app.post("/api/settings/block-schedule", async (req, res) => {
   try {
-    const { blockSchedule } = req.body;
-    userSettings.blockSchedule = blockSchedule;
+    const { startTime, endTime, days, code, problemId } = req.body;
+
+    // 스케줄이 활성화된 상태에서 변경하려는 경우 알고리즘 문제 풀이 검증
+    if (isScheduleActive) {
+      if (!code || !problemId) {
+        // 문제 풀이 없이 요청한 경우, 랜덤 문제 제공
+        const problem = getRandomProblem();
+        return res.status(400).json({
+          success: false,
+          error:
+            "스케줄 차단 중에는 알고리즘 문제를 풀어야 스케줄을 변경할 수 있습니다.",
+          requiresProblem: true,
+          problem: {
+            id: problem.id,
+            title: problem.title,
+            description: problem.description,
+            difficulty: problem.difficulty,
+            tags: problem.tags,
+            testCases: problem.testCases.map((tc) => ({
+              input: tc.input,
+              output: tc.output,
+            })),
+          },
+        });
+      }
+
+      // 코드 실행 및 검증
+      const problem = algorithmProblems.find((p) => p.id === problemId);
+      if (!problem) {
+        return res.status(404).json({
+          success: false,
+          error: "문제를 찾을 수 없습니다.",
+        });
+      }
+
+      const result = await executeCode(code, problem.testCases);
+
+      if (!result.success) {
+        return res.status(400).json({
+          success: false,
+          error: `문제 풀이 실패! ${result.passed}/${result.total} 테스트 통과`,
+          requiresProblem: true,
+          problem: {
+            id: problem.id,
+            title: problem.title,
+            description: problem.description,
+            difficulty: problem.difficulty,
+            tags: problem.tags || [],
+            testCases:
+              problem.testCases && Array.isArray(problem.testCases)
+                ? problem.testCases.map((tc) => ({
+                    input: tc.input || tc.input_data || "",
+                    output: tc.output || tc.expected_output || "",
+                  }))
+                : [],
+          },
+          testResults: result.results,
+        });
+      }
+
+      log("INFO", "✅ 스케줄 변경을 위한 알고리즘 문제 풀이 성공");
+    }
+
+    // 입력 검증
+    if (!startTime || !endTime || !days || !Array.isArray(days)) {
+      return res.status(400).json({
+        success: false,
+        error: "잘못된 입력입니다. startTime, endTime, days가 필요합니다.",
+      });
+    }
+
+    // 시간 형식 검증 (HH:MM)
+    const timeRegex = /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/;
+    if (!timeRegex.test(startTime) || !timeRegex.test(endTime)) {
+      return res.status(400).json({
+        success: false,
+        error: "시간 형식이 올바르지 않습니다. HH:MM 형식을 사용하세요.",
+      });
+    }
+
+    // 요일 검증
+    const validDays = ["일", "월", "화", "수", "목", "금", "토"];
+    if (!days.every((day) => validDays.includes(day))) {
+      return res.status(400).json({
+        success: false,
+        error:
+          "잘못된 요일입니다. 일, 월, 화, 수, 목, 금, 토 중에서 선택하세요.",
+      });
+    }
+
+    // 스케줄 업데이트
+    userSettings.blockSchedule = { startTime, endTime, days };
     saveUserSettings();
 
-    log("INFO", "차단 스케줄 설정 저장 완료");
+    log(
+      "INFO",
+      `스케줄 설정 저장: ${startTime} ~ ${endTime}, ${days.join(", ")}`
+    );
 
     res.json({
       success: true,
-      message: "차단 스케줄 설정이 저장되었습니다.",
-      settings: userSettings.blockSchedule,
+      message: isScheduleActive
+        ? "알고리즘 문제 풀이 성공! 차단 스케줄이 변경되었습니다."
+        : "차단 스케줄이 저장되었습니다.",
+      schedule: userSettings.blockSchedule,
+      problemSolved: isScheduleActive ? problem?.title : null,
+      testResults: isScheduleActive ? result : null,
     });
   } catch (error) {
-    log("ERROR", `차단 스케줄 설정 저장 실패: ${error.message}`);
+    log("ERROR", `스케줄 설정 저장 실패: ${error.message}`);
     res.status(500).json({
       success: false,
       error: error.message,
@@ -821,6 +1324,71 @@ app.post("/api/settings/reset", (req, res) => {
   }
 });
 
+// 알고리즘 문제 관련 API
+app.get("/api/algorithm/problems", (req, res) => {
+  res.json({
+    success: true,
+    problems: algorithmProblems,
+  });
+});
+
+app.get("/api/algorithm/problem/:id", (req, res) => {
+  const problem = algorithmProblems.find((p) => p.id === req.params.id);
+  if (problem) {
+    res.json({
+      success: true,
+      problem,
+    });
+  } else {
+    res.status(404).json({
+      success: false,
+      error: "문제를 찾을 수 없습니다.",
+    });
+  }
+});
+
+app.post("/api/algorithm/run-code", async (req, res) => {
+  try {
+    const { code, problemId } = req.body;
+    const problem = algorithmProblems.find((p) => p.id === problemId);
+
+    if (!problem) {
+      return res.status(404).json({
+        success: false,
+        error: "문제를 찾을 수 없습니다.",
+      });
+    }
+
+    const result = await executeCode(code, problem.testCases);
+    res.json({
+      success: true,
+      result,
+    });
+  } catch (error) {
+    log("ERROR", `코드 실행 중 오류: ${error.message}`);
+    res.status(500).json({
+      success: false,
+      error: error.message,
+    });
+  }
+});
+
+app.get("/api/algorithm/random-problem", (req, res) => {
+  const problem = getRandomProblem();
+  res.json({
+    success: true,
+    problem,
+  });
+});
+
+app.get("/api/algorithm/random-problem/:difficulty", (req, res) => {
+  const problem = getRandomProblem(req.params.difficulty);
+  res.json({
+    success: true,
+    problem,
+  });
+});
+
 // 서버 시작
 app.listen(PORT, () => {
   log("INFO", `차단 서버가 포트 ${PORT}에서 실행 중입니다.`);
@@ -836,6 +1404,15 @@ app.listen(PORT, () => {
   log("INFO", `- POST /api/settings/pomodoro - 포모도로 설정 저장`);
   log("INFO", `- GET  /api/settings/block-history - 차단 히스토리 조회`);
   log("INFO", `- POST /api/settings/reset - 설정 초기화`);
+  log("INFO", `알고리즘 문제 API:`);
+  log("INFO", `- GET  /api/algorithm/problems - 모든 문제 목록`);
+  log("INFO", `- GET  /api/algorithm/problem/:id - 특정 문제 조회`);
+  log("INFO", `- POST /api/algorithm/run-code - 코드 실행 및 검증`);
+  log("INFO", `- GET  /api/algorithm/random-problem - 랜덤 문제 조회`);
+  log(
+    "INFO",
+    `- GET  /api/algorithm/random-problem/:difficulty - 난이도별 랜덤 문제 조회`
+  );
 });
 
 module.exports = app;

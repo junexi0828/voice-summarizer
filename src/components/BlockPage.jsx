@@ -9,6 +9,7 @@ import {
   Target,
 } from "lucide-react";
 import NotificationBanner from "./NotificationBanner";
+import AlgorithmProblemModal from "./AlgorithmProblemModal";
 
 const BlockPage = () => {
   const [blockedSites, setBlockedSites] = useState([]);
@@ -19,6 +20,7 @@ const BlockPage = () => {
     monthlyBlocks: 0,
   });
   const [isBlockingEnabled, setIsBlockingEnabled] = useState(false);
+  const [isScheduleActive, setIsScheduleActive] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [notification, setNotification] = useState({
     show: false,
@@ -30,6 +32,13 @@ const BlockPage = () => {
     endTime: "18:00",
     days: ["월", "화", "수", "목", "금"],
   });
+
+  // 알고리즘 문제 관련 상태
+  const [algorithmProblem, setAlgorithmProblem] = useState(null);
+  const [isAlgorithmModalOpen, setIsAlgorithmModalOpen] = useState(false);
+  const [testResults, setTestResults] = useState(null);
+  const [isSubmittingCode, setIsSubmittingCode] = useState(false);
+  const [pendingAction, setPendingAction] = useState(null); // 'stop' 또는 'schedule'
 
   // 차단할 사이트 목록
   const defaultBlockedSites = useMemo(
@@ -106,6 +115,7 @@ const BlockPage = () => {
 
       if (data.success) {
         setIsBlockingEnabled(data.isBlockingEnabled);
+        setIsScheduleActive(data.isScheduleActive || false);
         setBlockStats(
           data.blockStats || {
             totalBlocks: 0,
@@ -139,6 +149,82 @@ const BlockPage = () => {
     // 페이지 로드 시 백엔드에서 차단 상태 가져오기
     fetchBlockStatus();
   }, [defaultBlockedSites]); // fetchBlockStatus 제거하여 무한 루프 방지
+
+  // 알고리즘 문제 풀이 제출
+  const handleAlgorithmSubmit = async (code) => {
+    setIsSubmittingCode(true);
+    setTestResults(null);
+
+    try {
+      let endpoint = "";
+      let requestBody = {
+        code,
+        problemId: algorithmProblem.id,
+      };
+
+      if (pendingAction === "stop") {
+        endpoint = "http://localhost:3001/api/block/stop";
+      } else if (pendingAction === "schedule") {
+        endpoint = "http://localhost:3001/api/settings/block-schedule";
+        requestBody = {
+          ...requestBody,
+          startTime: blockSchedule.startTime,
+          endTime: blockSchedule.endTime,
+          days: blockSchedule.days,
+        };
+      }
+
+      const response = await fetch(endpoint, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(requestBody),
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        // 성공 시 모달 닫기
+        setIsAlgorithmModalOpen(false);
+        setAlgorithmProblem(null);
+        setPendingAction(null);
+
+        setNotification({
+          show: true,
+          message: data.message || "✅ 알고리즘 문제 풀이 성공!",
+          type: "success",
+        });
+
+        // 상태 업데이트
+        if (pendingAction === "stop") {
+          setIsBlockingEnabled(false);
+        }
+
+        // 페이지 새로고침으로 최신 상태 가져오기
+        fetchBlockStatus();
+      } else {
+        // 실패 시 테스트 결과 표시
+        if (data.testResults) {
+          setTestResults(data.testResults);
+        }
+
+        setNotification({
+          show: true,
+          message: data.error || "❌ 문제 풀이 실패",
+          type: "error",
+        });
+      }
+    } catch (error) {
+      setNotification({
+        show: true,
+        message: "❌ 서버 연결 오류: " + error.message,
+        type: "error",
+      });
+    } finally {
+      setIsSubmittingCode(false);
+    }
+  };
 
   // 실제 차단 API 호출
   const callBlockAPI = async (action) => {
@@ -204,11 +290,30 @@ const BlockPage = () => {
         type: "success",
       });
     } else {
-      setNotification({
-        show: true,
-        message: "❌ 차단 중지 실패: " + result.error,
-        type: "error",
-      });
+      // 알고리즘 문제 풀이가 필요한 경우
+      if (result.requiresProblem && result.problem) {
+        setAlgorithmProblem(result.problem);
+        setPendingAction("stop");
+        setIsAlgorithmModalOpen(true);
+        setTestResults(null);
+        return;
+      }
+
+      // 스케줄 차단 중인 경우 특별한 메시지 표시
+      if (result.scheduleInfo?.isScheduleActive) {
+        const { currentDay, endTime } = result.scheduleInfo;
+        setNotification({
+          show: true,
+          message: `⏰ 스케줄 차단 시간 중입니다. ${currentDay} ${endTime}까지 차단이 유지됩니다.`,
+          type: "warning",
+        });
+      } else {
+        setNotification({
+          show: true,
+          message: "❌ 차단 중지 실패: " + result.error,
+          type: "error",
+        });
+      }
     }
   };
 
@@ -291,18 +396,44 @@ const BlockPage = () => {
   // 스케줄 설정을 백엔드에 저장
   const saveBlockSchedule = useCallback(async (newSchedule) => {
     try {
-      await fetch("http://localhost:3001/api/settings/block-schedule", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ blockSchedule: newSchedule }),
-      });
+      const response = await fetch(
+        "http://localhost:3001/api/settings/block-schedule",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            startTime: newSchedule.startTime,
+            endTime: newSchedule.endTime,
+            days: newSchedule.days,
+          }),
+        }
+      );
 
-      // 설정 저장 알림
-      setNotification({
-        show: true,
-        message: "⏰ 차단 스케줄 설정이 저장되었습니다.",
-        type: "success",
-      });
+      const data = await response.json();
+
+      if (data.success) {
+        // 설정 저장 알림
+        setNotification({
+          show: true,
+          message: data.message || "⏰ 차단 스케줄 설정이 저장되었습니다.",
+          type: "success",
+        });
+      } else {
+        // 알고리즘 문제 풀이가 필요한 경우
+        if (data.requiresProblem && data.problem) {
+          setAlgorithmProblem(data.problem);
+          setPendingAction("schedule");
+          setIsAlgorithmModalOpen(true);
+          setTestResults(null);
+          return;
+        }
+
+        setNotification({
+          show: true,
+          message: "❌ 스케줄 저장 실패: " + data.error,
+          type: "error",
+        });
+      }
     } catch (error) {
       console.error("차단 스케줄 설정 저장 실패:", error);
       setNotification({
@@ -338,9 +469,16 @@ const BlockPage = () => {
               ></div>
               <span className="text-lg font-semibold text-gray-800">
                 {isBlockingEnabled
-                  ? "차단 시스템 활성화"
+                  ? isScheduleActive
+                    ? "스케줄 차단 활성화"
+                    : "차단 시스템 활성화"
                   : "차단 시스템 비활성화"}
               </span>
+              {isScheduleActive && (
+                <span className="text-sm text-orange-600 bg-orange-100 px-2 py-1 rounded-full">
+                  ⏰ 스케줄
+                </span>
+              )}
             </div>
             <div className="flex gap-2">
               <button
@@ -356,14 +494,18 @@ const BlockPage = () => {
               </button>
               <button
                 onClick={stopBlocking}
-                disabled={isLoading || !isBlockingEnabled}
+                disabled={isLoading || !isBlockingEnabled || isScheduleActive}
                 className={`px-6 py-2 rounded-lg font-medium transition-all ${
-                  isLoading || !isBlockingEnabled
+                  isLoading || !isBlockingEnabled || isScheduleActive
                     ? "bg-gray-400 cursor-not-allowed"
                     : "bg-red-600 hover:bg-red-700 text-white"
                 }`}
               >
-                {isLoading ? "처리 중..." : "차단 중지"}
+                {isLoading
+                  ? "처리 중..."
+                  : isScheduleActive
+                  ? "스케줄 차단 중"
+                  : "차단 중지"}
               </button>
             </div>
           </div>
@@ -642,6 +784,21 @@ const BlockPage = () => {
           onClose={() =>
             setNotification({ show: false, message: "", type: "info" })
           }
+        />
+
+        {/* 알고리즘 문제 풀이 모달 */}
+        <AlgorithmProblemModal
+          isOpen={isAlgorithmModalOpen}
+          onClose={() => {
+            setIsAlgorithmModalOpen(false);
+            setAlgorithmProblem(null);
+            setPendingAction(null);
+            setTestResults(null);
+          }}
+          problem={algorithmProblem}
+          onSubmit={handleAlgorithmSubmit}
+          testResults={testResults}
+          isSubmitting={isSubmittingCode}
         />
       </div>
     </div>
