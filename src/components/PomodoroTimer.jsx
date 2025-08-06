@@ -31,12 +31,61 @@ const PomodoroTimer = () => {
   });
 
   const intervalRef = useRef(null);
-  const audioRef = useRef(null);
 
-  // 알림음 재생
+  // 알림음 재생 (Web Audio API 사용)
   const playNotificationSound = useCallback(() => {
-    if (!isMuted && audioRef.current) {
-      audioRef.current.play().catch((e) => console.log("알림음 재생 실패:", e));
+    if (isMuted) return;
+
+    try {
+      const audioContext = new (window.AudioContext ||
+        window.webkitAudioContext)();
+      const oscillator = audioContext.createOscillator();
+      const gainNode = audioContext.createGain();
+
+      oscillator.connect(gainNode);
+      gainNode.connect(audioContext.destination);
+
+      // 알림음 설정
+      oscillator.frequency.setValueAtTime(800, audioContext.currentTime); // 800Hz
+      oscillator.type = "sine";
+
+      // 볼륨 페이드 인/아웃
+      gainNode.gain.setValueAtTime(0, audioContext.currentTime);
+      gainNode.gain.linearRampToValueAtTime(
+        0.3,
+        audioContext.currentTime + 0.1
+      );
+      gainNode.gain.linearRampToValueAtTime(0, audioContext.currentTime + 0.5);
+
+      oscillator.start(audioContext.currentTime);
+      oscillator.stop(audioContext.currentTime + 0.5);
+
+      // 두 번째 알림음 (더 높은 톤)
+      setTimeout(() => {
+        const oscillator2 = audioContext.createOscillator();
+        const gainNode2 = audioContext.createGain();
+
+        oscillator2.connect(gainNode2);
+        gainNode2.connect(audioContext.destination);
+
+        oscillator2.frequency.setValueAtTime(1000, audioContext.currentTime);
+        oscillator2.type = "sine";
+
+        gainNode2.gain.setValueAtTime(0, audioContext.currentTime);
+        gainNode2.gain.linearRampToValueAtTime(
+          0.3,
+          audioContext.currentTime + 0.1
+        );
+        gainNode2.gain.linearRampToValueAtTime(
+          0,
+          audioContext.currentTime + 0.5
+        );
+
+        oscillator2.start(audioContext.currentTime);
+        oscillator2.stop(audioContext.currentTime + 0.5);
+      }, 200);
+    } catch (error) {
+      console.log("알림음 재생 실패:", error);
     }
   }, [isMuted]);
 
@@ -253,6 +302,13 @@ const PomodoroTimer = () => {
             </button>
 
             <button
+              onClick={playNotificationSound}
+              className="flex items-center gap-2 px-4 py-3 bg-orange-600 hover:bg-orange-700 text-white rounded-lg font-medium transition-all"
+            >
+              🔔 테스트
+            </button>
+
+            <button
               onClick={() => setShowSettings(!showSettings)}
               className="flex items-center gap-2 px-4 py-3 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-medium transition-all"
             >
@@ -414,14 +470,6 @@ const PomodoroTimer = () => {
             </div>
           </div>
         </div>
-
-        {/* 알림음 */}
-        <audio ref={audioRef} preload="auto">
-          <source
-            src="data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBSuBzvLZiTYIG2m98OScTgwOUarm7blmGgU7k9n1unEiBC13yO/eizEIHWq+8+OWT"
-            type="audio/wav"
-          />
-        </audio>
 
         {/* 알림 배너 */}
         <NotificationBanner
