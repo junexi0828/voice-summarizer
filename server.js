@@ -1756,6 +1756,263 @@ app.post("/api/sync-logs", (req, res) => {
   }
 });
 
+// ----- AI API 프록시 엔드포인트 (CORS 문제 해결) -----
+app.post("/api/ai/claude", async (req, res) => {
+  try {
+    const { prompt, apiKey } = req.body;
+
+    if (!apiKey) {
+      return res
+        .status(400)
+        .json({ success: false, error: "API 키가 필요합니다." });
+    }
+
+    const response = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: {
+        "anthropic-version": "2023-06-01",
+        "content-type": "application/json",
+        "x-api-key": apiKey,
+      },
+      body: JSON.stringify({
+        model: "claude-3-5-sonnet-20241022",
+        max_tokens: 4000,
+        messages: [{ role: "user", content: prompt }],
+      }),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      return res.status(response.status).json({
+        success: false,
+        error: data.error?.message || "Claude API 호출 실패",
+      });
+    }
+
+    res.json({
+      success: true,
+      result: data.content[0].text,
+    });
+  } catch (error) {
+    console.error("Claude API 프록시 오류:", error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+app.post("/api/ai/gpt", async (req, res) => {
+  try {
+    const { prompt, apiKey } = req.body;
+
+    if (!apiKey) {
+      return res
+        .status(400)
+        .json({ success: false, error: "API 키가 필요합니다." });
+    }
+
+    const response = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model: "gpt-4o-mini",
+        messages: [{ role: "user", content: prompt }],
+        max_tokens: 4000,
+      }),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      return res.status(response.status).json({
+        success: false,
+        error: data.error?.message || "GPT API 호출 실패",
+      });
+    }
+
+    res.json({
+      success: true,
+      result: data.choices[0].message.content,
+    });
+  } catch (error) {
+    console.error("GPT API 프록시 오류:", error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+app.post("/api/ai/groq", async (req, res) => {
+  try {
+    const { prompt, apiKey } = req.body;
+
+    if (!apiKey) {
+      return res
+        .status(400)
+        .json({ success: false, error: "API 키가 필요합니다." });
+    }
+
+    const response = await fetch(
+      "https://api.groq.com/openai/v1/chat/completions",
+      {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          authorization: `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify({
+          model: "llama3-70b-8192",
+          messages: [{ role: "user", content: prompt }],
+          max_tokens: 4000,
+        }),
+      }
+    );
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      return res.status(response.status).json({
+        success: false,
+        error: data.error?.message || "Groq API 호출 실패",
+      });
+    }
+
+    res.json({
+      success: true,
+      result: data.choices[0].message.content,
+    });
+  } catch (error) {
+    console.error("Groq API 프록시 오류:", error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+app.post("/api/ai/perplexity", async (req, res) => {
+  try {
+    const { prompt, apiKey } = req.body;
+
+    if (!apiKey) {
+      return res
+        .status(400)
+        .json({ success: false, error: "API 키가 필요합니다." });
+    }
+
+    const response = await fetch("https://api.perplexity.ai/chat/completions", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model: "llama-3.1-8b-instant",
+        messages: [{ role: "user", content: prompt }],
+        max_tokens: 4000,
+      }),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      return res.status(response.status).json({
+        success: false,
+        error: data.error?.message || "Perplexity API 호출 실패",
+      });
+    }
+
+    res.json({
+      success: true,
+      result: data.choices[0].message.content,
+    });
+  } catch (error) {
+    console.error("Perplexity API 프록시 오류:", error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+app.post("/api/ai/gemini", async (req, res) => {
+  try {
+    const { prompt, apiKey } = req.body;
+
+    if (!apiKey) {
+      return res
+        .status(400)
+        .json({ success: false, error: "API 키가 필요합니다." });
+    }
+
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
+      {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: prompt }] }],
+          generationConfig: {
+            maxOutputTokens: 4000,
+          },
+        }),
+      }
+    );
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      return res.status(response.status).json({
+        success: false,
+        error: data.error?.message || "Gemini API 호출 실패",
+      });
+    }
+
+    res.json({
+      success: true,
+      result: data.candidates[0].content.parts[0].text,
+    });
+  } catch (error) {
+    console.error("Gemini API 프록시 오류:", error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// ----- 루트 경로 핸들러 (NGROK 404 에러 방지) -----
+app.get("/", (req, res) => {
+  res.json({
+    success: true,
+    message: "EIE Concierge Backend API Server",
+    version: "1.0.0",
+    timestamp: new Date().toISOString(),
+    endpoints: {
+      status: "/api/status",
+      block: {
+        start: "/api/block/start",
+        stop: "/api/block/stop",
+        status: "/api/block/status",
+        sites: "/api/block/sites",
+      },
+      settings: {
+        all: "/api/settings",
+        blockedSites: "/api/settings/blocked-sites",
+        blockSchedule: "/api/settings/block-schedule",
+        pomodoro: "/api/settings/pomodoro",
+        blockHistory: "/api/settings/block-history",
+        reset: "/api/settings/reset",
+      },
+      algorithm: {
+        problems: "/api/algorithm/problems",
+        problem: "/api/algorithm/problem/:id",
+        runCode: "/api/algorithm/run-code",
+        randomProblem: "/api/algorithm/random-problem",
+        randomProblemByDifficulty: "/api/algorithm/random-problem/:difficulty",
+      },
+      logs: {
+        timerLogs: "/api/timer-logs",
+        blockLogs: "/api/block-logs",
+        syncLogs: "/api/sync-logs",
+      },
+    },
+  });
+});
+
 // 서버 시작
 app.listen(PORT, "127.0.0.1", () => {
   log("INFO", `차단 서버가 포트 ${PORT}에서 실행 중입니다.`);

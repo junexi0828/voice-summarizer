@@ -1,87 +1,67 @@
 // AI 서비스 관리자 클래스
 
 class AIServiceManager {
-    constructor() {
-        this.services = {
-            claude: {
-                name: 'Claude',
-                baseUrl: 'https://api.anthropic.com/v1/messages',
-                headers: {
-                    'anthropic-version': '2023-06-01',
-                    'content-type': 'application/json',
-                }
-            },
-            gpt: {
-                name: 'GPT',
-                baseUrl: 'https://api.openai.com/v1/chat/completions',
-                headers: {
-                    'content-type': 'application/json',
-                }
-            },
-            groq: {
-                name: 'Groq',
-                baseUrl: 'https://api.groq.com/openai/v1/chat/completions',
-                headers: {
-                    'content-type': 'application/json',
-                }
-            },
-            perplexity: {
-                name: 'Perplexity',
-                baseUrl: 'https://api.perplexity.ai/chat/completions',
-                headers: {
-                    'content-type': 'application/json',
-                }
-            },
-            gemini: {
-                name: 'Gemini',
-                baseUrl: 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent',
-                headers: {
-                    'content-type': 'application/json',
-                }
-            }
-        };
+  constructor() {
+    this.services = {
+      claude: {
+        name: "Claude",
+        proxyUrl: "/api/ai/claude",
+      },
+      gpt: {
+        name: "GPT",
+        proxyUrl: "/api/ai/gpt",
+      },
+      groq: {
+        name: "Groq",
+        proxyUrl: "/api/ai/groq",
+      },
+      perplexity: {
+        name: "Perplexity",
+        proxyUrl: "/api/ai/perplexity",
+      },
+      gemini: {
+        name: "Gemini",
+        proxyUrl: "/api/ai/gemini",
+      },
+    };
+  }
+
+  async processWithAI(serviceId, text, userToken) {
+    const service = this.services[serviceId];
+    if (!service) {
+      throw new Error(`지원하지 않는 AI 서비스: ${serviceId}`);
     }
 
-    async processWithAI(serviceId, text, userToken) {
-        const service = this.services[serviceId];
-        if (!service) {
-            throw new Error(`지원하지 않는 AI 서비스: ${serviceId}`);
-        }
+    const prompt = this.createPrompt(text);
 
-        const prompt = this.createPrompt(text);
+    try {
+      // 백엔드 프록시를 통해 AI API 호출
+      const response = await fetch(service.proxyUrl, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          prompt: prompt,
+          apiKey: userToken,
+        }),
+      });
 
-        try {
-            let response;
+      const data = await response.json();
 
-            switch (serviceId) {
-                case 'claude':
-                    response = await this.callClaudeAPI(prompt, userToken);
-                    break;
-                case 'gpt':
-                    response = await this.callGPTAPI(prompt, userToken);
-                    break;
-                case 'groq':
-                    response = await this.callGroqAPI(prompt, userToken);
-                    break;
-                case 'perplexity':
-                    response = await this.callPerplexityAPI(prompt, userToken);
-                    break;
-                case 'gemini':
-                    response = await this.callGeminiAPI(prompt, userToken);
-                    break;
-                default:
-                    throw new Error(`지원하지 않는 AI 서비스: ${serviceId}`);
-            }
+      if (!response.ok) {
+        throw new Error(data.error || `${service.name} API 호출 실패`);
+      }
 
-            return response;
-        } catch (error) {
-            console.error(`${service.name} API 호출 오류:`, error);
-            throw error;
-        }
+      return data.result;
+    } catch (error) {
+      console.error(`${service.name} API 호출 오류:`, error);
+      throw error;
     }
+  }
 
-    createPrompt(text) {
-        return `당신은 텍스트 정리 및 요약 전문가입니다.
+  createPrompt(text) {
+    return `당신은 텍스트 정리 및 요약 전문가입니다.
 
 아래는 사용자가 음성으로 입력한 텍스트입니다. 구어체, 말버릇, 반복, 부정확한 문장이 포함되어 있을 수 있습니다.
 
@@ -101,120 +81,7 @@ ${text}
 """
 
 위 조건에 맞게 정리해 주세요.`;
-    }
-
-    async callClaudeAPI(prompt, userToken) {
-        const response = await fetch(this.services.claude.baseUrl, {
-            method: 'POST',
-            headers: {
-                ...this.services.claude.headers,
-                'x-api-key': userToken,
-            },
-            body: JSON.stringify({
-                model: 'claude-3-sonnet-20240229',
-                messages: [{ role: 'user', content: prompt }],
-                max_tokens: 1024
-            }),
-        });
-
-        if (!response.ok) {
-            throw new Error(`Claude API 오류: ${response.status}`);
-        }
-
-        const data = await response.json();
-        return data?.content?.[0]?.text || '결과를 받아오지 못했습니다.';
-    }
-
-    async callGPTAPI(prompt, userToken) {
-        const response = await fetch(this.services.gpt.baseUrl, {
-            method: 'POST',
-            headers: {
-                ...this.services.gpt.headers,
-                'Authorization': `Bearer ${userToken}`,
-            },
-            body: JSON.stringify({
-                model: 'gpt-3.5-turbo',
-                messages: [{ role: 'user', content: prompt }],
-                max_tokens: 1024
-            }),
-        });
-
-        if (!response.ok) {
-            throw new Error(`GPT API 오류: ${response.status}`);
-        }
-
-        const data = await response.json();
-        return data?.choices?.[0]?.message?.content || '결과를 받아오지 못했습니다.';
-    }
-
-    async callGroqAPI(prompt, userToken) {
-        const response = await fetch(this.services.groq.baseUrl, {
-            method: 'POST',
-            headers: {
-                ...this.services.groq.headers,
-                'Authorization': `Bearer ${userToken}`,
-            },
-            body: JSON.stringify({
-                model: 'llama3-8b-8192',
-                messages: [{ role: 'user', content: prompt }],
-                max_tokens: 1024
-            }),
-        });
-
-        if (!response.ok) {
-            throw new Error(`Groq API 오류: ${response.status}`);
-        }
-
-        const data = await response.json();
-        return data?.choices?.[0]?.message?.content || '결과를 받아오지 못했습니다.';
-    }
-
-    async callPerplexityAPI(prompt, userToken) {
-        const response = await fetch(this.services.perplexity.baseUrl, {
-            method: 'POST',
-            headers: {
-                ...this.services.perplexity.headers,
-                'Authorization': `Bearer ${userToken}`,
-            },
-            body: JSON.stringify({
-                model: 'llama-3.1-8b-instant',
-                messages: [{ role: 'user', content: prompt }],
-                max_tokens: 1024
-            }),
-        });
-
-        if (!response.ok) {
-            throw new Error(`Perplexity API 오류: ${response.status}`);
-        }
-
-        const data = await response.json();
-        return data?.choices?.[0]?.message?.content || '결과를 받아오지 못했습니다.';
-    }
-
-    async callGeminiAPI(prompt, userToken) {
-        const response = await fetch(`${this.services.gemini.baseUrl}?key=${userToken}`, {
-            method: 'POST',
-            headers: {
-                ...this.services.gemini.headers,
-                'X-goog-api-key': userToken
-            },
-            body: JSON.stringify({
-                contents: [{
-                    parts: [{
-                        text: prompt
-                    }]
-                }]
-            }),
-        });
-
-        if (!response.ok) {
-            const errorText = await response.text();
-            throw new Error(`Gemini API 오류: ${response.status} - ${errorText}`);
-        }
-
-        const data = await response.json();
-        return data?.candidates?.[0]?.content?.parts?.[0]?.text || '결과를 받아오지 못했습니다.';
-    }
+  }
 }
 
 const aiServiceManager = new AIServiceManager();

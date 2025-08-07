@@ -8,11 +8,25 @@ import React, {
 
 // API 기본 URL 설정
 const getApiBaseUrl = () => {
+  // 환경 변수가 설정되어 있으면 우선 사용
   if (process.env.REACT_APP_API_URL) {
+    console.log("환경 변수에서 API URL 사용:", process.env.REACT_APP_API_URL);
     return process.env.REACT_APP_API_URL;
   }
+
   const hostname = window.location.hostname;
-  return `http://${hostname}:3001`;
+  console.log("현재 호스트명:", hostname);
+
+  // 프로덕션 환경에서는 NGROK URL 사용
+  if (hostname === "eieconcierge.com" || hostname === "www.eieconcierge.com") {
+    const ngrokUrl = "https://be8b2c8c5bb3.ngrok-free.app";
+    console.log("프로덕션 환경에서 NGROK URL 사용:", ngrokUrl);
+    return ngrokUrl;
+  }
+
+  const localUrl = `http://${hostname}:3001`;
+  console.log("로컬 환경에서 URL 사용:", localUrl);
+  return localUrl;
 };
 
 const API_BASE_URL = getApiBaseUrl();
@@ -210,7 +224,10 @@ export const ProductivityProvider = ({ children }) => {
           breakTime: Math.max(0, 8 - newStats.workTime),
           completedTasks: newStats.completedTasks,
           focusScore: newStats.focusScore,
-          blockTime: calculateBlockTime(),
+          // calculateBlockTime을 인라인으로 계산하여 의존성 문제 해결
+          blockTime: state.blockLogs
+            .filter((log) => log.date === state.currentDate)
+            .reduce((total, log) => total + (log.duration || 0), 0),
           productivity: newStats.productivity,
         },
       },
@@ -224,9 +241,9 @@ export const ProductivityProvider = ({ children }) => {
   }, [
     state.workSessions,
     state.currentDate,
-    state.productivityData,
-    calculateBlockTime,
-    saveToLocalStorage,
+    // state.productivityData를 의존성에서 제거하여 무한 루프 방지
+    // saveToLocalStorage와 calculateBlockTime을 의존성에서 제거하여 무한 루프 방지
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   ]);
 
   // 타이머 로그 추가
@@ -320,49 +337,115 @@ export const ProductivityProvider = ({ children }) => {
   );
 
   // 작업 세션 추가
-  const addWorkSession = useCallback(() => {
-    const newSession = {
-      id: Date.now(),
-      date: state.currentDate,
-      startTime: new Date().toLocaleTimeString("ko-KR", {
-        hour: "2-digit",
-        minute: "2-digit",
-        hour12: false,
-      }),
-      endTime: "",
-      task: "",
-      completed: false,
-    };
-    dispatch({ type: ACTIONS.ADD_WORK_SESSION, payload: newSession });
-    saveToLocalStorage("productivity_work_sessions", [
-      ...state.workSessions,
-      newSession,
-    ]);
-  }, [state.currentDate, state.workSessions, saveToLocalStorage]);
+  const addWorkSession = useCallback(
+    async (session) => {
+      const newSession = {
+        id: Date.now(),
+        ...session,
+        date: state.currentDate,
+      };
+
+      try {
+        const response = await fetch(`${API_BASE_URL}/api/work-sessions`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(newSession),
+        });
+
+        if (response.ok) {
+          dispatch({ type: ACTIONS.ADD_WORK_SESSION, payload: newSession });
+          console.log("작업 세션이 서버에 저장되었습니다.");
+        } else {
+          dispatch({ type: ACTIONS.ADD_WORK_SESSION, payload: newSession });
+          saveToLocalStorage("productivity_work_sessions", [
+            ...state.workSessions,
+            newSession,
+          ]);
+          console.error("서버 저장 실패, localStorage에 저장");
+        }
+      } catch (error) {
+        dispatch({ type: ACTIONS.ADD_WORK_SESSION, payload: newSession });
+        saveToLocalStorage("productivity_work_sessions", [
+          ...state.workSessions,
+          newSession,
+        ]);
+        console.error("서버 연결 실패, localStorage에 저장:", error);
+      }
+    },
+    [state.currentDate, state.workSessions, saveToLocalStorage]
+  );
 
   // 작업 세션 업데이트
   const updateWorkSession = useCallback(
-    (id, field, value) => {
-      dispatch({
-        type: ACTIONS.UPDATE_WORK_SESSION,
-        payload: { id, updates: { [field]: value } },
-      });
+    async (id, updates) => {
       const updatedSessions = state.workSessions.map((session) =>
-        session.id === id ? { ...session, [field]: value } : session
+        session.id === id ? { ...session, ...updates } : session
       );
-      saveToLocalStorage("productivity_work_sessions", updatedSessions);
+
+      try {
+        const response = await fetch(
+          `${API_BASE_URL}/api/work-sessions/${id}`,
+          {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(updates),
+          }
+        );
+
+        if (response.ok) {
+          dispatch({
+            type: ACTIONS.UPDATE_WORK_SESSION,
+            payload: updatedSessions,
+          });
+          console.log("작업 세션이 서버에서 업데이트되었습니다.");
+        } else {
+          dispatch({
+            type: ACTIONS.UPDATE_WORK_SESSION,
+            payload: updatedSessions,
+          });
+          saveToLocalStorage("productivity_work_sessions", updatedSessions);
+          console.error("서버 업데이트 실패, localStorage에 저장");
+        }
+      } catch (error) {
+        dispatch({
+          type: ACTIONS.UPDATE_WORK_SESSION,
+          payload: updatedSessions,
+        });
+        saveToLocalStorage("productivity_work_sessions", updatedSessions);
+        console.error("서버 연결 실패, localStorage에 저장:", error);
+      }
     },
     [state.workSessions, saveToLocalStorage]
   );
 
   // 작업 세션 삭제
   const deleteWorkSession = useCallback(
-    (id) => {
-      dispatch({ type: ACTIONS.DELETE_WORK_SESSION, payload: id });
-      const updatedSessions = state.workSessions.filter(
+    async (id) => {
+      const filteredSessions = state.workSessions.filter(
         (session) => session.id !== id
       );
-      saveToLocalStorage("productivity_work_sessions", updatedSessions);
+
+      try {
+        const response = await fetch(
+          `${API_BASE_URL}/api/work-sessions/${id}`,
+          {
+            method: "DELETE",
+          }
+        );
+
+        if (response.ok) {
+          dispatch({ type: ACTIONS.DELETE_WORK_SESSION, payload: id });
+          console.log("작업 세션이 서버에서 삭제되었습니다.");
+        } else {
+          dispatch({ type: ACTIONS.DELETE_WORK_SESSION, payload: id });
+          saveToLocalStorage("productivity_work_sessions", filteredSessions);
+          console.error("서버 삭제 실패, localStorage에 저장");
+        }
+      } catch (error) {
+        dispatch({ type: ACTIONS.DELETE_WORK_SESSION, payload: id });
+        saveToLocalStorage("productivity_work_sessions", filteredSessions);
+        console.error("서버 연결 실패, localStorage에 저장:", error);
+      }
     },
     [state.workSessions, saveToLocalStorage]
   );
@@ -372,35 +455,69 @@ export const ProductivityProvider = ({ children }) => {
     dispatch({ type: ACTIONS.SET_LOADING, payload: true });
 
     try {
-      // 서버에서 데이터 로드
-      const [timerResponse, blockResponse] = await Promise.all([
-        fetch(`${API_BASE_URL}/api/timer-logs`),
-        fetch(`${API_BASE_URL}/api/block-logs`),
-      ]);
-
-      if (timerResponse.ok) {
-        const timerData = await timerResponse.json();
-        dispatch({
-          type: ACTIONS.SET_TIMER_LOGS,
-          payload: timerData.logs || [],
-        });
-      } else {
+      // API_BASE_URL이 비어있으면 오프라인 모드
+      if (!API_BASE_URL) {
+        console.log("오프라인 모드로 실행 중");
         const savedTimerLogs = loadFromLocalStorage("productivity_timer_logs");
-        dispatch({ type: ACTIONS.SET_TIMER_LOGS, payload: savedTimerLogs });
-      }
-
-      if (blockResponse.ok) {
-        const blockData = await blockResponse.json();
-        dispatch({
-          type: ACTIONS.SET_BLOCK_LOGS,
-          payload: blockData.logs || [],
-        });
-      } else {
         const savedBlockLogs = loadFromLocalStorage("productivity_block_logs");
+        const savedWorkSessions = loadFromLocalStorage(
+          "productivity_work_sessions"
+        );
+        const savedProductivityData = loadFromLocalStorage(
+          "productivity_data",
+          {
+            daily: {},
+            weekly: {},
+            monthly: {},
+          }
+        );
+        const savedAiAnalysis = loadFromLocalStorage(
+          "productivity_ai_analysis"
+        );
+
+        dispatch({ type: ACTIONS.SET_TIMER_LOGS, payload: savedTimerLogs });
         dispatch({ type: ACTIONS.SET_BLOCK_LOGS, payload: savedBlockLogs });
+        dispatch({
+          type: ACTIONS.SET_WORK_SESSIONS,
+          payload: savedWorkSessions,
+        });
+        dispatch({
+          type: ACTIONS.SET_PRODUCTIVITY_DATA,
+          payload: savedProductivityData,
+        });
+        if (savedAiAnalysis && typeof savedAiAnalysis === "object") {
+          dispatch({ type: ACTIONS.SET_AI_ANALYSIS, payload: savedAiAnalysis });
+        }
+        return;
       }
 
-      // 로컬 스토리지에서 데이터 로드
+      const response = await fetch(`${API_BASE_URL}/api/timer-logs`);
+      if (response.ok) {
+        const data = await response.json();
+        dispatch({ type: ACTIONS.SET_TIMER_LOGS, payload: data.timerLogs });
+        dispatch({ type: ACTIONS.SET_BLOCK_LOGS, payload: data.blockLogs });
+        dispatch({
+          type: ACTIONS.SET_WORK_SESSIONS,
+          payload: data.workSessions,
+        });
+        dispatch({
+          type: ACTIONS.SET_PRODUCTIVITY_DATA,
+          payload: data.productivityData,
+        });
+        if (data.aiAnalysis && typeof data.aiAnalysis === "object") {
+          dispatch({ type: ACTIONS.SET_AI_ANALYSIS, payload: data.aiAnalysis });
+        }
+        console.log("데이터 로드 완료");
+      } else {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+    } catch (error) {
+      console.error("데이터 로드 실패:", error);
+      console.log("오프라인 모드로 전환");
+
+      // 오프라인 모드로 전환
+      const savedTimerLogs = loadFromLocalStorage("productivity_timer_logs");
+      const savedBlockLogs = loadFromLocalStorage("productivity_block_logs");
       const savedWorkSessions = loadFromLocalStorage(
         "productivity_work_sessions"
       );
@@ -410,8 +527,12 @@ export const ProductivityProvider = ({ children }) => {
         monthly: {},
       });
       const savedAiAnalysis = loadFromLocalStorage("productivity_ai_analysis");
-
-      dispatch({ type: ACTIONS.SET_WORK_SESSIONS, payload: savedWorkSessions });
+      dispatch({ type: ACTIONS.SET_TIMER_LOGS, payload: savedTimerLogs });
+      dispatch({ type: ACTIONS.SET_BLOCK_LOGS, payload: savedBlockLogs });
+      dispatch({
+        type: ACTIONS.SET_WORK_SESSIONS,
+        payload: savedWorkSessions,
+      });
       dispatch({
         type: ACTIONS.SET_PRODUCTIVITY_DATA,
         payload: savedProductivityData,
@@ -419,9 +540,6 @@ export const ProductivityProvider = ({ children }) => {
       if (savedAiAnalysis && typeof savedAiAnalysis === "object") {
         dispatch({ type: ACTIONS.SET_AI_ANALYSIS, payload: savedAiAnalysis });
       }
-    } catch (error) {
-      console.error("데이터 로드 실패:", error);
-      dispatch({ type: ACTIONS.SET_ERROR, payload: error.message });
     } finally {
       dispatch({ type: ACTIONS.SET_LOADING, payload: false });
     }
@@ -462,9 +580,10 @@ export const ProductivityProvider = ({ children }) => {
   }, [loadData]);
 
   // 통계 계산
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     calculateTodayStats();
-  }, [calculateTodayStats]);
+  }, []); // calculateTodayStats 의존성 제거하여 무한 루프 방지
 
   const value = {
     ...state,

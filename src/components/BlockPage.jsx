@@ -12,15 +12,16 @@ import NotificationBanner from "./NotificationBanner";
 import AlgorithmProblemModal from "./AlgorithmProblemModal";
 import { useProductivity } from "../contexts/ProductivityContext";
 
-// API 기본 URL 설정 - 동적 IP 감지
+// API 기본 URL 설정
 const getApiBaseUrl = () => {
-  // 환경 변수가 설정되어 있으면 사용
   if (process.env.REACT_APP_API_URL) {
     return process.env.REACT_APP_API_URL;
   }
-
-  // 현재 호스트의 IP 주소 사용
   const hostname = window.location.hostname;
+  // 프로덕션 환경에서는 NGROK URL 사용
+  if (hostname === "eieconcierge.com" || hostname === "www.eieconcierge.com") {
+    return "https://be8b2c8c5bb3.ngrok-free.app"; // NGROK URL
+  }
   return `http://${hostname}:3001`;
 };
 
@@ -126,6 +127,12 @@ const BlockPage = ({ onBlockComplete }) => {
   // 백엔드에서 차단 상태 가져오기
   const fetchBlockStatus = useCallback(async () => {
     try {
+      // API_BASE_URL이 비어있으면 오프라인 모드
+      if (!API_BASE_URL) {
+        console.log("오프라인 모드로 실행 중");
+        return;
+      }
+
       const response = await fetch(`${API_BASE_URL}/api/block/status`);
       const data = await response.json();
 
@@ -157,6 +164,7 @@ const BlockPage = ({ onBlockComplete }) => {
       }
     } catch (error) {
       console.error("차단 상태 가져오기 실패:", error);
+      console.log("오프라인 모드로 전환");
     }
   }, []); // 의존성 배열을 비워서 무한 루프 방지
 
