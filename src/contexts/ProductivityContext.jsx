@@ -8,25 +8,34 @@ import React, {
 
 // API 기본 URL 설정
 const getApiBaseUrl = () => {
-  // 환경 변수가 설정되어 있으면 우선 사용
   if (process.env.REACT_APP_API_URL) {
-    console.log("환경 변수에서 API URL 사용:", process.env.REACT_APP_API_URL);
+    if (process.env.NODE_ENV === "development") {
+      console.log("환경 변수에서 API URL 사용:", process.env.REACT_APP_API_URL);
+    }
     return process.env.REACT_APP_API_URL;
   }
-
-  const hostname = window.location.hostname;
-  console.log("현재 호스트명:", hostname);
-
-  // 프로덕션 환경에서는 NGROK URL 사용
-  if (hostname === "eieconcierge.com" || hostname === "www.eieconcierge.com") {
-    const ngrokUrl = "https://be8b2c8c5bb3.ngrok-free.app";
-    console.log("프로덕션 환경에서 NGROK URL 사용:", ngrokUrl);
-    return ngrokUrl;
+  if (typeof window !== "undefined") {
+    const hostname = window.location.hostname;
+    if (process.env.NODE_ENV === "development") {
+      console.log("현재 호스트명:", hostname);
+    }
+    if (
+      hostname === "eieconcierge.com" ||
+      hostname === "www.eieconcierge.com"
+    ) {
+      const ngrokUrl = "https://be8b2c8c5bb3.ngrok-free.app";
+      if (process.env.NODE_ENV === "development") {
+        console.log("프로덕션 환경에서 NGROK URL 사용:", ngrokUrl);
+      }
+      return ngrokUrl;
+    }
+    const localUrl = `http://${hostname}:3001`;
+    if (process.env.NODE_ENV === "development") {
+      console.log("로컬 환경에서 URL 사용:", localUrl);
+    }
+    return localUrl;
   }
-
-  const localUrl = `http://${hostname}:3001`;
-  console.log("로컬 환경에서 URL 사용:", localUrl);
-  return localUrl;
+  return "";
 };
 
 const API_BASE_URL = getApiBaseUrl();
@@ -53,8 +62,8 @@ const initialState = {
   error: null,
 };
 
-// 액션 타입
-const ACTIONS = {
+// 액션 타입 상수
+export const ACTION_TYPES = {
   SET_LOADING: "SET_LOADING",
   SET_ERROR: "SET_ERROR",
   SET_TIMER_LOGS: "SET_TIMER_LOGS",
@@ -75,25 +84,25 @@ const ACTIONS = {
 // 리듀서
 const productivityReducer = (state, action) => {
   switch (action.type) {
-    case ACTIONS.SET_LOADING:
+    case ACTION_TYPES.SET_LOADING:
       return { ...state, isLoading: action.payload };
-    case ACTIONS.SET_ERROR:
+    case ACTION_TYPES.SET_ERROR:
       return { ...state, error: action.payload, isLoading: false };
-    case ACTIONS.SET_TIMER_LOGS:
+    case ACTION_TYPES.SET_TIMER_LOGS:
       return { ...state, timerLogs: action.payload };
-    case ACTIONS.SET_BLOCK_LOGS:
+    case ACTION_TYPES.SET_BLOCK_LOGS:
       return { ...state, blockLogs: action.payload };
-    case ACTIONS.SET_WORK_SESSIONS:
+    case ACTION_TYPES.SET_WORK_SESSIONS:
       return { ...state, workSessions: action.payload };
-    case ACTIONS.SET_PRODUCTIVITY_DATA:
+    case ACTION_TYPES.SET_PRODUCTIVITY_DATA:
       return { ...state, productivityData: action.payload };
-    case ACTIONS.SET_AI_ANALYSIS:
+    case ACTION_TYPES.SET_AI_ANALYSIS:
       return { ...state, aiAnalysis: action.payload };
-    case ACTIONS.SET_CURRENT_DATE:
+    case ACTION_TYPES.SET_CURRENT_DATE:
       return { ...state, currentDate: action.payload };
-    case ACTIONS.SET_TODAY_STATS:
+    case ACTION_TYPES.SET_TODAY_STATS:
       return { ...state, todayStats: action.payload };
-    case ACTIONS.ADD_TIMER_LOG:
+    case ACTION_TYPES.ADD_TIMER_LOG:
       return {
         ...state,
         timerLogs: [
@@ -101,7 +110,7 @@ const productivityReducer = (state, action) => {
           action.payload,
         ],
       };
-    case ACTIONS.ADD_BLOCK_LOG:
+    case ACTION_TYPES.ADD_BLOCK_LOG:
       return {
         ...state,
         blockLogs: [
@@ -109,7 +118,7 @@ const productivityReducer = (state, action) => {
           action.payload,
         ],
       };
-    case ACTIONS.ADD_WORK_SESSION:
+    case ACTION_TYPES.ADD_WORK_SESSION:
       return {
         ...state,
         workSessions: [
@@ -125,7 +134,7 @@ const productivityReducer = (state, action) => {
           },
         ],
       };
-    case ACTIONS.UPDATE_WORK_SESSION:
+    case ACTION_TYPES.UPDATE_WORK_SESSION:
       return {
         ...state,
         workSessions: (Array.isArray(state.workSessions)
@@ -137,7 +146,7 @@ const productivityReducer = (state, action) => {
             : session
         ),
       };
-    case ACTIONS.DELETE_WORK_SESSION:
+    case ACTION_TYPES.DELETE_WORK_SESSION:
       return {
         ...state,
         workSessions: (Array.isArray(state.workSessions)
@@ -145,7 +154,7 @@ const productivityReducer = (state, action) => {
           : []
         ).filter((session) => session.id !== action.payload),
       };
-    case ACTIONS.SYNC_LOGS:
+    case ACTION_TYPES.SYNC_LOGS:
       return {
         ...state,
         timerLogs: action.payload.timerLogs || state.timerLogs,
@@ -163,29 +172,35 @@ const ProductivityContext = createContext();
 export const ProductivityProvider = ({ children }) => {
   // 초기 상태를 안전하게 설정
   const getInitialState = () => {
-    const savedCurrentDate = localStorage.getItem("productivity_current_date");
+    let savedCurrentDate = initialState.currentDate;
+    if (typeof window !== "undefined") {
+      savedCurrentDate =
+        localStorage.getItem("productivity_current_date") ||
+        initialState.currentDate;
+    }
 
     // 로컬 스토리지에서 안전하게 로드하는 헬퍼 함수
     const safeLoadFromStorage = (key, defaultValue = []) => {
       try {
+        if (typeof window === "undefined") return defaultValue;
         const data = localStorage.getItem(key);
         if (!data) return defaultValue;
-
         const parsed = JSON.parse(data);
         return Array.isArray(parsed) ? parsed : defaultValue;
       } catch (error) {
-        console.error(`${key} 로드 실패:`, error);
+        if (process.env.NODE_ENV === "development") {
+          console.error(`${key} 로드 실패:`, error);
+        }
         return defaultValue;
       }
     };
 
     return {
       ...initialState,
-      // 강제로 배열로 설정하고 로컬 스토리지에서 안전하게 로드
       timerLogs: safeLoadFromStorage("productivity_timer_logs", []),
       blockLogs: safeLoadFromStorage("productivity_block_logs", []),
       workSessions: safeLoadFromStorage("productivity_work_sessions", []),
-      currentDate: savedCurrentDate || initialState.currentDate,
+      currentDate: savedCurrentDate,
     };
   };
 
@@ -281,14 +296,18 @@ export const ProductivityProvider = ({ children }) => {
         const jsonString = JSON.stringify(cleanData);
         localStorage.setItem(key, jsonString);
       } catch (error) {
-        console.error("데이터 저장 실패:", error);
-        console.error("문제가 된 데이터:", data);
+        if (process.env.NODE_ENV === "development") {
+          console.error("데이터 저장 실패:", error);
+          console.error("문제가 된 데이터:", data);
+        }
 
         // 실패 시 기본값 저장
         try {
           localStorage.setItem(key, JSON.stringify([]));
         } catch (fallbackError) {
-          console.error("기본값 저장도 실패:", fallbackError);
+          if (process.env.NODE_ENV === "development") {
+            console.error("기본값 저장도 실패:", fallbackError);
+          }
         }
       }
     },
@@ -313,7 +332,9 @@ export const ProductivityProvider = ({ children }) => {
 
       return parsed;
     } catch (error) {
-      console.error("데이터 불러오기 실패:", error);
+      if (process.env.NODE_ENV === "development") {
+        console.error("데이터 불러오기 실패:", error);
+      }
       return defaultValue;
     }
   }, []);
@@ -429,14 +450,18 @@ export const ProductivityProvider = ({ children }) => {
 
         if (response.ok) {
           dispatch({ type: ACTIONS.ADD_TIMER_LOG, payload: newLog });
-          console.log("타이머 로그가 서버에 저장되었습니다.");
+          if (process.env.NODE_ENV === "development") {
+            console.log("타이머 로그가 서버에 저장되었습니다.");
+          }
         } else {
           dispatch({ type: ACTIONS.ADD_TIMER_LOG, payload: newLog });
           saveToLocalStorage("productivity_timer_logs", [
             ...state.timerLogs,
             newLog,
           ]);
-          console.error("서버 저장 실패, localStorage에 저장");
+          if (process.env.NODE_ENV === "development") {
+            console.error("서버 저장 실패, localStorage에 저장");
+          }
         }
       } catch (error) {
         dispatch({ type: ACTIONS.ADD_TIMER_LOG, payload: newLog });
@@ -444,7 +469,9 @@ export const ProductivityProvider = ({ children }) => {
           ...state.timerLogs,
           newLog,
         ]);
-        console.error("서버 연결 실패, localStorage에 저장:", error);
+        if (process.env.NODE_ENV === "development") {
+          console.error("서버 연결 실패, localStorage에 저장:", error);
+        }
       }
     },
     [state.currentDate, state.timerLogs, saveToLocalStorage]
@@ -474,14 +501,18 @@ export const ProductivityProvider = ({ children }) => {
 
         if (response.ok) {
           dispatch({ type: ACTIONS.ADD_BLOCK_LOG, payload: newLog });
-          console.log("차단 로그가 서버에 저장되었습니다.");
+          if (process.env.NODE_ENV === "development") {
+            console.log("차단 로그가 서버에 저장되었습니다.");
+          }
         } else {
           dispatch({ type: ACTIONS.ADD_BLOCK_LOG, payload: newLog });
           saveToLocalStorage("productivity_block_logs", [
             ...state.blockLogs,
             newLog,
           ]);
-          console.error("서버 저장 실패, localStorage에 저장");
+          if (process.env.NODE_ENV === "development") {
+            console.error("서버 저장 실패, localStorage에 저장");
+          }
         }
       } catch (error) {
         dispatch({ type: ACTIONS.ADD_BLOCK_LOG, payload: newLog });
@@ -489,7 +520,9 @@ export const ProductivityProvider = ({ children }) => {
           ...state.blockLogs,
           newLog,
         ]);
-        console.error("서버 연결 실패, localStorage에 저장:", error);
+        if (process.env.NODE_ENV === "development") {
+          console.error("서버 연결 실패, localStorage에 저장:", error);
+        }
       }
     },
     [state.currentDate, state.blockLogs, saveToLocalStorage]
@@ -525,13 +558,17 @@ export const ProductivityProvider = ({ children }) => {
           );
           const updatedSessions = [...currentSessions, newSession];
           saveToLocalStorage("productivity_work_sessions", updatedSessions);
-          console.log("작업 세션이 서버에 저장되었습니다.");
+          if (process.env.NODE_ENV === "development") {
+            console.log("작업 세션이 서버에 저장되었습니다.");
+          }
         } else if (response.status === 400) {
           // 서버에 세션 등록 실패 - 로컬에서만 저장하고 경고
-          console.warn(
-            "서버에 세션 등록 실패 (400), 로컬에서만 저장:",
-            newSession
-          );
+          if (process.env.NODE_ENV === "development") {
+            console.warn(
+              "서버에 세션 등록 실패 (400), 로컬에서만 저장:",
+              newSession
+            );
+          }
           dispatch({ type: ACTIONS.ADD_WORK_SESSION, payload: newSession });
           const currentSessions = loadFromLocalStorage(
             "productivity_work_sessions",
@@ -548,7 +585,9 @@ export const ProductivityProvider = ({ children }) => {
           );
           const updatedSessions = [...currentSessions, newSession];
           saveToLocalStorage("productivity_work_sessions", updatedSessions);
-          console.error("서버 저장 실패, localStorage에 저장");
+          if (process.env.NODE_ENV === "development") {
+            console.error("서버 저장 실패, localStorage에 저장");
+          }
         }
       } catch (error) {
         // 네트워크 오류 - 로컬에서만 저장
@@ -559,7 +598,9 @@ export const ProductivityProvider = ({ children }) => {
         );
         const updatedSessions = [...currentSessions, newSession];
         saveToLocalStorage("productivity_work_sessions", updatedSessions);
-        console.error("서버 연결 실패, localStorage에 저장:", error);
+        if (process.env.NODE_ENV === "development") {
+          console.error("서버 연결 실패, localStorage에 저장:", error);
+        }
       }
     },
     [state.currentDate, saveToLocalStorage, loadFromLocalStorage]
@@ -588,10 +629,12 @@ export const ProductivityProvider = ({ children }) => {
       );
 
       if (!sessionExistsInStorage && !sessionExistsInState) {
-        console.warn(
-          "로컬 스토리지와 상태에 모두 존재하지 않는 세션 업데이트 시도:",
-          id
-        );
+        if (process.env.NODE_ENV === "development") {
+          console.warn(
+            "로컬 스토리지와 상태에 모두 존재하지 않는 세션 업데이트 시도:",
+            id
+          );
+        }
         return;
       }
 
@@ -631,10 +674,14 @@ export const ProductivityProvider = ({ children }) => {
             type: ACTIONS.UPDATE_WORK_SESSION,
             payload: { id, updates: { [field]: value } },
           });
-          console.log("작업 세션이 서버에서 업데이트되었습니다.");
+          if (process.env.NODE_ENV === "development") {
+            console.log("작업 세션이 서버에서 업데이트되었습니다.");
+          }
         } else if (response.status === 404) {
           // 서버에 존재하지 않는 세션 - 로컬에서만 업데이트
-          console.warn("서버에 존재하지 않는 세션:", id);
+          if (process.env.NODE_ENV === "development") {
+            console.warn("서버에 존재하지 않는 세션:", id);
+          }
           dispatch({
             type: ACTIONS.UPDATE_WORK_SESSION,
             payload: { id, updates: { [field]: value } },
@@ -647,7 +694,9 @@ export const ProductivityProvider = ({ children }) => {
             payload: { id, updates: { [field]: value } },
           });
           saveToLocalStorage("productivity_work_sessions", updatedSessions);
-          console.error("서버 업데이트 실패, localStorage에 저장");
+          if (process.env.NODE_ENV === "development") {
+            console.error("서버 업데이트 실패, localStorage에 저장");
+          }
         }
       } catch (error) {
         // 네트워크 오류 - 로컬에서만 업데이트
@@ -656,7 +705,9 @@ export const ProductivityProvider = ({ children }) => {
           payload: { id, updates: { [field]: value } },
         });
         saveToLocalStorage("productivity_work_sessions", updatedSessions);
-        console.error("서버 연결 실패, localStorage에 저장:", error);
+        if (process.env.NODE_ENV === "development") {
+          console.error("서버 연결 실패, localStorage에 저장:", error);
+        }
       }
     },
     [saveToLocalStorage, loadFromLocalStorage, state.workSessions]
@@ -684,23 +735,31 @@ export const ProductivityProvider = ({ children }) => {
 
         if (response.ok) {
           dispatch({ type: ACTIONS.DELETE_WORK_SESSION, payload: id });
-          console.log("작업 세션이 서버에서 삭제되었습니다.");
+          if (process.env.NODE_ENV === "development") {
+            console.log("작업 세션이 서버에서 삭제되었습니다.");
+          }
         } else if (response.status === 404) {
           // 서버에 존재하지 않는 세션 - 로컬에서만 삭제
-          console.warn("서버에 존재하지 않는 세션 삭제:", id);
+          if (process.env.NODE_ENV === "development") {
+            console.warn("서버에 존재하지 않는 세션 삭제:", id);
+          }
           dispatch({ type: ACTIONS.DELETE_WORK_SESSION, payload: id });
           saveToLocalStorage("productivity_work_sessions", filteredSessions);
         } else {
           // 기타 서버 오류
           dispatch({ type: ACTIONS.DELETE_WORK_SESSION, payload: id });
           saveToLocalStorage("productivity_work_sessions", filteredSessions);
-          console.error("서버 삭제 실패, localStorage에 저장");
+          if (process.env.NODE_ENV === "development") {
+            console.error("서버 삭제 실패, localStorage에 저장");
+          }
         }
       } catch (error) {
         // 네트워크 오류 - 로컬에서만 삭제
         dispatch({ type: ACTIONS.DELETE_WORK_SESSION, payload: id });
         saveToLocalStorage("productivity_work_sessions", filteredSessions);
-        console.error("서버 연결 실패, localStorage에 저장:", error);
+        if (process.env.NODE_ENV === "development") {
+          console.error("서버 연결 실패, localStorage에 저장:", error);
+        }
       }
     },
     [saveToLocalStorage, loadFromLocalStorage]
@@ -716,13 +775,19 @@ export const ProductivityProvider = ({ children }) => {
           // 서버 데이터로 로컬 상태 업데이트
           dispatch({ type: ACTIONS.SET_WORK_SESSIONS, payload: data.sessions });
           saveToLocalStorage("productivity_work_sessions", data.sessions);
-          console.log("서버 데이터와 동기화 완료");
+          if (process.env.NODE_ENV === "development") {
+            console.log("서버 데이터와 동기화 완료");
+          }
         }
       } else {
-        console.warn("서버 동기화 실패:", response.status);
+        if (process.env.NODE_ENV === "development") {
+          console.warn("서버 동기화 실패:", response.status);
+        }
       }
     } catch (error) {
-      console.error("서버 동기화 실패:", error);
+      if (process.env.NODE_ENV === "development") {
+        console.error("서버 동기화 실패:", error);
+      }
     }
   }, [saveToLocalStorage]);
 
@@ -733,7 +798,9 @@ export const ProductivityProvider = ({ children }) => {
     try {
       // API_BASE_URL이 비어있으면 오프라인 모드
       if (!API_BASE_URL) {
-        console.log("오프라인 모드로 실행 중");
+        if (process.env.NODE_ENV === "development") {
+          console.log("오프라인 모드로 실행 중");
+        }
         const savedTimerLogs = loadFromLocalStorage("productivity_timer_logs");
         const savedBlockLogs = loadFromLocalStorage("productivity_block_logs");
         const savedWorkSessions = loadFromLocalStorage(
@@ -783,13 +850,17 @@ export const ProductivityProvider = ({ children }) => {
         if (data.aiAnalysis && typeof data.aiAnalysis === "object") {
           dispatch({ type: ACTIONS.SET_AI_ANALYSIS, payload: data.aiAnalysis });
         }
-        console.log("데이터 로드 완료");
+        if (process.env.NODE_ENV === "development") {
+          console.log("데이터 로드 완료");
+        }
       } else {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
     } catch (error) {
-      console.error("데이터 로드 실패:", error);
-      console.log("오프라인 모드로 전환");
+      if (process.env.NODE_ENV === "development") {
+        console.error("데이터 로드 실패:", error);
+        console.log("오프라인 모드로 전환");
+      }
 
       // 오프라인 모드로 전환
       const savedTimerLogs = loadFromLocalStorage("productivity_timer_logs");
@@ -842,10 +913,14 @@ export const ProductivityProvider = ({ children }) => {
           dispatch({ type: ACTIONS.SYNC_LOGS, payload: data });
           localStorage.removeItem("productivity_timer_logs");
           localStorage.removeItem("productivity_block_logs");
-          console.log("로그 동기화 완료");
+          if (process.env.NODE_ENV === "development") {
+            console.log("로그 동기화 완료");
+          }
         }
       } catch (error) {
-        console.error("로그 동기화 실패:", error);
+        if (process.env.NODE_ENV === "development") {
+          console.error("로그 동기화 실패:", error);
+        }
       }
     }
   }, [loadFromLocalStorage]);
@@ -853,6 +928,22 @@ export const ProductivityProvider = ({ children }) => {
   // 컴포넌트 마운트 시 데이터 로드
   useEffect(() => {
     loadData();
+    // 타이머 로그 로컬스토리지 로딩 (초기화)
+    if (typeof window !== "undefined") {
+      const storedLogs = localStorage.getItem("productivity_timer_logs");
+      if (storedLogs) {
+        try {
+          dispatch({
+            type: ACTION_TYPES.SET_TIMER_LOGS,
+            payload: JSON.parse(storedLogs),
+          });
+        } catch (error) {
+          if (process.env.NODE_ENV === "development") {
+            console.error("타이머 로딩 실패:", error);
+          }
+        }
+      }
+    }
   }, [loadData]);
 
   // 통계 계산
@@ -873,11 +964,13 @@ export const ProductivityProvider = ({ children }) => {
     calculateTodayStats,
     calculateBlockTime,
     setCurrentDate: (date) => {
-      dispatch({ type: ACTIONS.SET_CURRENT_DATE, payload: date });
-      localStorage.setItem("productivity_current_date", date);
+      dispatch({ type: ACTION_TYPES.SET_CURRENT_DATE, payload: date });
+      if (typeof window !== "undefined") {
+        localStorage.setItem("productivity_current_date", date);
+      }
     },
     setAiAnalysis: (analysis) => {
-      dispatch({ type: ACTIONS.SET_AI_ANALYSIS, payload: analysis });
+      dispatch({ type: ACTION_TYPES.SET_AI_ANALYSIS, payload: analysis });
       saveToLocalStorage("productivity_ai_analysis", analysis);
     },
   };
