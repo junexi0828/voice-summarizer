@@ -37,6 +37,9 @@
     ],
     "globals": {
       "chrome": "readonly"
+    },
+    "rules": {
+      "react-hooks/exhaustive-deps": "warn"
     }
   },
   "browserslist": {
