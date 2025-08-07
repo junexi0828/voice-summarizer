@@ -7,6 +7,7 @@ const { PythonShell } = require("python-shell");
 
 // 알고리즘 문제 시스템 - Python API 연동
 
+// 알고리즘 문제 시스템 상수 정의
 const ProblemDifficulty = {
   EASY: "EASY",
   MEDIUM: "MEDIUM",
@@ -790,7 +791,7 @@ function getRandomProblemFromAPI(difficulty = null) {
 
     PythonShell.run("get_random_problem.py", options, (err, results) => {
       if (err) {
-        console.error("Python API 실행 오류:", err);
+        log("ERROR", `Python API 실행 오류: ${err.message}`);
         // API 실패시 기본 문제 반환
         resolve(getDefaultProblem(difficulty));
         return;
@@ -800,15 +801,16 @@ function getRandomProblemFromAPI(difficulty = null) {
         try {
           // 결과를 JSON으로 파싱
           const problem = JSON.parse(results[0]);
-          console.log(
+          log(
+            "INFO",
             `API에서 문제 가져옴: ${problem.title} (${
               problem.platform || "Unknown"
             })`
           );
           resolve(problem);
         } catch (parseError) {
-          console.error("JSON 파싱 오류:", parseError);
-          console.error("원본 결과:", results[0]);
+          log("ERROR", `JSON 파싱 오류: ${parseError.message}`);
+          log("ERROR", `원본 결과: ${results[0]}`);
           resolve(getDefaultProblem(difficulty));
         }
       } else {
@@ -886,7 +888,7 @@ async function getRandomProblem(difficulty = null) {
   try {
     return await getRandomProblemFromAPI(difficulty);
   } catch (error) {
-    console.error("API 호출 실패, 기본 문제 사용:", error);
+    log("ERROR", `API 호출 실패, 기본 문제 사용: ${error.message}`);
     return getDefaultProblem(difficulty);
   }
 }
@@ -1005,26 +1007,34 @@ app.post("/api/block/stop", async (req, res) => {
 
     if (!code || !problemId) {
       // 문제 풀이 없이 요청한 경우, 랜덤 문제 제공
-      const problem = getRandomProblem();
-      return res.status(400).json({
-        success: false,
-        error: "차단 해제를 위해서는 알고리즘 문제를 풀어야 합니다.",
-        requiresProblem: true,
-        problem: {
-          id: problem.id,
-          title: problem.title,
-          description: problem.description,
-          difficulty: problem.difficulty,
-          tags: problem.tags || [],
-          testCases:
-            problem.testCases && Array.isArray(problem.testCases)
-              ? problem.testCases.map((tc) => ({
-                  input: tc.input || tc.input_data || "",
-                  output: tc.output || tc.expected_output || "",
-                }))
-              : [],
-        },
-      });
+      try {
+        const problem = await getRandomProblem();
+        return res.status(400).json({
+          success: false,
+          error: "차단 해제를 위해서는 알고리즘 문제를 풀어야 합니다.",
+          requiresProblem: true,
+          problem: {
+            id: problem.id,
+            title: problem.title,
+            description: problem.description,
+            difficulty: problem.difficulty,
+            tags: problem.tags || [],
+            testCases:
+              problem.testCases && Array.isArray(problem.testCases)
+                ? problem.testCases.map((tc) => ({
+                    input: tc.input || tc.input_data || "",
+                    output: tc.output || tc.expected_output || "",
+                  }))
+                : [],
+          },
+        });
+      } catch (error) {
+        log("ERROR", `랜덤 문제 생성 실패: ${error.message}`);
+        return res.status(500).json({
+          success: false,
+          error: "문제 생성 중 오류가 발생했습니다.",
+        });
+      }
     }
 
     // 코드 실행 및 검증
@@ -1166,24 +1176,32 @@ app.post("/api/settings/block-schedule", async (req, res) => {
     if (isScheduleActive) {
       if (!code || !problemId) {
         // 문제 풀이 없이 요청한 경우, 랜덤 문제 제공
-        const problem = getRandomProblem();
-        return res.status(400).json({
-          success: false,
-          error:
-            "스케줄 차단 중에는 알고리즘 문제를 풀어야 스케줄을 변경할 수 있습니다.",
-          requiresProblem: true,
-          problem: {
-            id: problem.id,
-            title: problem.title,
-            description: problem.description,
-            difficulty: problem.difficulty,
-            tags: problem.tags,
-            testCases: problem.testCases.map((tc) => ({
-              input: tc.input,
-              output: tc.output,
-            })),
-          },
-        });
+        try {
+          const problem = await getRandomProblem();
+          return res.status(400).json({
+            success: false,
+            error:
+              "스케줄 차단 중에는 알고리즘 문제를 풀어야 스케줄을 변경할 수 있습니다.",
+            requiresProblem: true,
+            problem: {
+              id: problem.id,
+              title: problem.title,
+              description: problem.description,
+              difficulty: problem.difficulty,
+              tags: problem.tags,
+              testCases: problem.testCases.map((tc) => ({
+                input: tc.input,
+                output: tc.output,
+              })),
+            },
+          });
+        } catch (error) {
+          log("ERROR", `스케줄 변경용 랜덤 문제 생성 실패: ${error.message}`);
+          return res.status(500).json({
+            success: false,
+            error: "문제 생성 중 오류가 발생했습니다.",
+          });
+        }
       }
 
       // 코드 실행 및 검증
@@ -1490,20 +1508,36 @@ app.post("/api/algorithm/run-code", async (req, res) => {
   }
 });
 
-app.get("/api/algorithm/random-problem", (req, res) => {
-  const problem = getRandomProblem();
-  res.json({
-    success: true,
-    problem,
-  });
+app.get("/api/algorithm/random-problem", async (req, res) => {
+  try {
+    const problem = await getRandomProblem();
+    res.json({
+      success: true,
+      problem,
+    });
+  } catch (error) {
+    log("ERROR", `랜덤 문제 조회 실패: ${error.message}`);
+    res.status(500).json({
+      success: false,
+      error: error.message,
+    });
+  }
 });
 
-app.get("/api/algorithm/random-problem/:difficulty", (req, res) => {
-  const problem = getRandomProblem(req.params.difficulty);
-  res.json({
-    success: true,
-    problem,
-  });
+app.get("/api/algorithm/random-problem/:difficulty", async (req, res) => {
+  try {
+    const problem = await getRandomProblem(req.params.difficulty);
+    res.json({
+      success: true,
+      problem,
+    });
+  } catch (error) {
+    log("ERROR", `난이도별 랜덤 문제 조회 실패: ${error.message}`);
+    res.status(500).json({
+      success: false,
+      error: error.message,
+    });
+  }
 });
 
 // ----- 타이머 로그 API -----

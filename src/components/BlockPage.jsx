@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import NotificationBanner from "./NotificationBanner";
 import AlgorithmProblemModal from "./AlgorithmProblemModal";
+import { useProductivity } from "../contexts/ProductivityContext";
 
 // API 기본 URL 설정 - 동적 IP 감지
 const getApiBaseUrl = () => {
@@ -26,6 +27,7 @@ const getApiBaseUrl = () => {
 const API_BASE_URL = getApiBaseUrl();
 
 const BlockPage = ({ onBlockComplete }) => {
+  const { addBlockLog } = useProductivity();
   const [blockedSites, setBlockedSites] = useState([]);
   const [blockStats, setBlockStats] = useState({
     totalBlocks: 0,
@@ -277,6 +279,7 @@ const BlockPage = ({ onBlockComplete }) => {
     const result = await callBlockAPI("start");
     if (result.success) {
       // 차단 로그 추가
+      addBlockLog(0, "집중 모드 시작");
       if (onBlockComplete) {
         // 차단 시작 시간 저장
         localStorage.setItem("block_start_time", new Date().toISOString());
@@ -304,18 +307,19 @@ const BlockPage = ({ onBlockComplete }) => {
     const result = await callBlockAPI("stop");
     if (result.success) {
       // 차단 로그 추가 (실제 차단 시간 계산)
+      // 실제 차단 시작 시간을 저장하고 있었던 경우 계산
+      const blockStartTime = localStorage.getItem("block_start_time");
+      let blockDuration = 30; // 기본값
+
+      if (blockStartTime) {
+        const startTime = new Date(blockStartTime);
+        const endTime = new Date();
+        blockDuration = Math.round((endTime - startTime) / (1000 * 60)); // 분 단위
+        localStorage.removeItem("block_start_time");
+      }
+
+      addBlockLog(blockDuration, "집중 모드 종료");
       if (onBlockComplete) {
-        // 실제 차단 시작 시간을 저장하고 있었던 경우 계산
-        const blockStartTime = localStorage.getItem("block_start_time");
-        let blockDuration = 30; // 기본값
-
-        if (blockStartTime) {
-          const startTime = new Date(blockStartTime);
-          const endTime = new Date();
-          blockDuration = Math.round((endTime - startTime) / (1000 * 60)); // 분 단위
-          localStorage.removeItem("block_start_time");
-        }
-
         onBlockComplete(blockDuration, "집중 모드 종료");
       }
 

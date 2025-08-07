@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { CheckCircle, XCircle, Clock, AlertTriangle } from "lucide-react";
 
 // API 기본 URL 설정 - 동적 IP 감지
@@ -80,7 +80,7 @@ const APITest = () => {
     }
   };
 
-  const runAllTests = async () => {
+  const runAllTests = useCallback(async () => {
     setIsTesting(true);
     const results = {};
 
@@ -113,11 +113,11 @@ const APITest = () => {
 
     setTestResults(results);
     setIsTesting(false);
-  };
+  }, []);
 
   useEffect(() => {
     runAllTests();
-  }, []);
+  }, [runAllTests]);
 
   const getStatusIcon = (success) => {
     if (success === undefined)
