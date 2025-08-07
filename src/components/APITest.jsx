@@ -119,7 +119,7 @@ const APITest = () => {
 
   useEffect(() => {
     runAllTests();
-  }, []); // runAllTests 의존성 제거하여 무한 루프 방지
+  }, [runAllTests]); // runAllTests 의존성 추가
 
   const getStatusIcon = (success) => {
     if (success === undefined)

@@ -400,8 +400,9 @@ export const ProductivityProvider = ({ children }) => {
   }, [
     state.workSessions,
     state.currentDate,
+    saveToLocalStorage,
     // state.productivityData를 의존성에서 제거하여 무한 루프 방지
-    // saveToLocalStorage와 calculateBlockTime을 의존성에서 제거하여 무한 루프 방지
+    // calculateBlockTime을 의존성에서 제거하여 무한 루프 방지
   ]);
 
   // 타이머 로그 추가
@@ -857,7 +858,7 @@ export const ProductivityProvider = ({ children }) => {
   // 통계 계산
   useEffect(() => {
     calculateTodayStats();
-  }, []); // calculateTodayStats 의존성 제거하여 무한 루프 방지
+  }, [calculateTodayStats]); // calculateTodayStats 의존성 추가
 
   const value = {
     ...state,
