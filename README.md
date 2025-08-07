@@ -1,129 +1,337 @@
-# AI Voice Summarizer - Chrome Extension
+# EIE Concierge - AI-Powered Productivity Platform
 
-음성을 텍스트로 변환하고 다양한 AI 서비스로 자동 요약하는 크롬 확장 프로그램입니다.
+<div align="center">
 
-## 🚀 주요 기능
+![EIE Concierge Logo](https://img.shields.io/badge/EIE-Concierge-blue?style=for-the-badge&logo=google)
+![React](https://img.shields.io/badge/React-18.2.0-61DAFB?style=for-the-badge&logo=react)
+![Node.js](https://img.shields.io/badge/Node.js-18+-339933?style=for-the-badge&logo=node.js)
+![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)
 
-- **음성 인식**: Web Speech API를 사용한 실시간 음성-텍스트 변환
-- **자동 가변 입력창**: 입력 줄 수에 따라 자동으로 늘어나는 편리한 텍스트 입력
-- **다중 AI 서비스 지원**: Claude, GPT, Groq, Perplexity, Gemini
-- **API 키 관리**: 각 AI 서비스별 API 키 안전한 저장, 삭제(X) 버튼 제공
-- **개인정보 보호**: API 키는 브라우저 로컬에만 저장, 서버로 전송되지 않음(법적 안내 푸터 포함)
-- **크로스 플랫폼**: 크롬 확장 프로그램으로 어디서든 사용 가능
-- **단순한 UX**: 로그인 없이 바로 사용 가능
+**AI 기반 생산성 도구로 더 나은 삶을 만들어가세요**
+[![Deploy to Vercel](https://img.shields.io/badge/Deploy%20to-Vercel-black?style=for-the-badge&logo=vercel)](https://vercel.com)
+[![Chrome Extension](https://img.shields.io/badge/Chrome-Extension-yellow?style=for-the-badge&logo=google-chrome)](https://chrome.google.com/webstore)
 
-## 🛠️ 기술 스택
+</div>
 
-- **Frontend**: React 19, Tailwind CSS
-- **음성 인식**: Web Speech API
-- **AI 서비스**: Claude, GPT, Groq, Perplexity, Gemini
-- **스토리지**: Chrome Storage API, localStorage
+---
 
-## 📦 설치 방법
+## 📋 Table of Contents
 
-### 1. 개발 환경 설정
+- [Overview](#-overview)
+- [Architecture](#-architecture)
+- [Features](#-features)
+- [Technology Stack](#-technology-stack)
+- [Getting Started](#-getting-started)
+- [API Documentation](#-api-documentation)
+- [Deployment](#-deployment)
+- [Contributing](#-contributing)
+- [License](#-license)
+
+---
+
+## 🎯 Overview
+
+**EIE Concierge**는 AI 기술을 활용한 종합 생산성 관리 플랫폼입니다. 음성 인식, 포모도로 타이머, 집중 모드 차단, 생산성 분석 등 다양한 기능을 통합하여 사용자의 업무 효율성을 극대화합니다.
+
+### 🏆 Key Highlights
+
+- **🔊 AI Voice Recognition**: 실시간 음성-텍스트 변환 및 AI 요약
+- **⏱️ Smart Timer System**: 포모도로 기반 집중력 향상 도구
+- **🛡️ Focus Mode**: 방해 요소 차단으로 깊은 집중 환경 제공
+- **📊 Productivity Analytics**: AI 기반 생산성 분석 및 개선 제안
+- **🔄 Real-time Sync**: 서버-클라이언트 실시간 데이터 동기화
+
+---
+
+## 🏗️ Architecture
+
+### System Architecture
+
+```
+┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
+│   Frontend      │    │   Backend       │    │   AI Services   │
+│   (React)       │◄──►│   (Node.js)     │◄──►│   (Claude/GPT)  │
+└─────────────────┘    └─────────────────┘    └─────────────────┘
+         │                       │                       │
+         ▼                       ▼                       ▼
+┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
+│  Context API    │    │  REST API       │    │  External APIs  │
+│  (State Mgmt)   │    │  (Express)      │    │  (AI Providers) │
+└─────────────────┘    └─────────────────┘    └─────────────────┘
+```
+
+### Component Architecture
+
+```
+ProductivityProvider (Context)
+├── PomodoroTimer
+│   └── addTimerLog() → Backend API
+├── BlockPage
+│   └── addBlockLog() → Backend API
+├── ProductivityManager
+│   ├── Data Visualization
+│   ├── AI Analysis
+│   └── Real-time Updates
+└── VoiceTextSummarizer
+    └── AI Processing
+```
+
+---
+
+## ✨ Features
+
+### 🎤 AI Voice Processing
+
+- **Real-time Speech Recognition**: Web Speech API 기반 실시간 음성 인식
+- **Multi-AI Summarization**: Claude, GPT, Groq, Perplexity, Gemini 지원
+- **Smart Text Processing**: 자동 가변 입력창 및 마크다운 지원
+- **Secure API Management**: 브라우저 로컬 기반 API 키 관리
+
+### ⏰ Productivity Timer
+
+- **Pomodoro Technique**: 25분 집중 / 5분 휴식 사이클
+- **Customizable Settings**: 작업/휴식 시간 및 알림음 설정
+- **Progress Tracking**: 실시간 진행률 및 통계 표시
+- **Auto-logging**: 타이머 완료 시 자동 생산성 데이터 기록
+
+### 🛡️ Focus Mode System
+
+- **Website Blocking**: 소셜미디어, 엔터테인먼트 사이트 차단
+- **Schedule Management**: 시간대별 자동 차단 스케줄링
+- **Algorithm Challenges**: 차단 해제를 위한 알고리즘 문제 풀이
+- **Browser Integration**: Chrome 확장 프로그램 연동
+
+### 📈 Productivity Analytics
+
+- **Real-time Dashboard**: 일일/주간/월간 생산성 통계
+- **AI-powered Insights**: 작업 패턴 분석 및 개선 제안
+- **Data Visualization**: 차트 및 그래프 기반 시각화
+- **Goal Tracking**: 생산성 목표 설정 및 달성률 추적
+
+### 🔄 Data Synchronization
+
+- **Offline Support**: 로컬 스토리지 기반 오프라인 동작
+- **Auto Sync**: 온라인 시 자동 서버 동기화
+- **Conflict Resolution**: 데이터 충돌 자동 해결
+- **Backup & Restore**: 데이터 백업 및 복원 기능
+
+---
+
+## 🛠️ Technology Stack
+
+### Frontend
+
+- **Framework**: React 18.2.0 with Hooks
+- **State Management**: Context API + useReducer
+- **Styling**: Tailwind CSS 3.4.17
+- **UI Components**: Lucide React Icons
+- **Build Tool**: Create React App 5.0.1
+
+### Backend
+
+- **Runtime**: Node.js 18+
+- **Framework**: Express.js 4.18.2
+- **CORS**: Cross-Origin Resource Sharing
+- **File System**: Node.js fs module
+- **Process Management**: Child Process API
+
+### AI & External Services
+
+- **Claude**: Anthropic AI API
+- **GPT**: OpenAI API
+- **Groq**: High-speed AI API
+- **Perplexity**: Search-based AI
+- **Gemini**: Google AI API
+
+### Data Storage
+
+- **Client-side**: localStorage, Chrome Storage API
+- **Server-side**: File-based JSON storage
+- **Sync**: RESTful API endpoints
+
+### Development Tools
+
+- **Package Manager**: npm 9+
+- **Version Control**: Git
+- **Deployment**: Vercel, Chrome Web Store
+- **Code Quality**: ESLint, Prettier
+
+---
+
+## 🚀 Getting Started
+
+### Prerequisites
+
+- Node.js 18.0.0 or higher
+- npm 9.0.0 or higher
+- Chrome browser (for extension)
+- Git
+
+### Installation
 
 ```bash
-# 저장소 클론
+# Clone the repository
 git clone https://github.com/junexi0828/voice-summarizer.git
 cd voice-summarizer
 
-# 의존성 설치
+# Install dependencies
 npm install
 
-# 개발 서버 실행
+# Start development server
 npm start
 ```
 
-### 2. 크롬 확장 프로그램 빌드
+### Environment Setup
 
 ```bash
-# 확장 프로그램용 빌드
-npm run build:extension
+# Create environment file
+cp .env.example .env
+
+# Configure environment variables
+REACT_APP_API_URL=http://localhost:3001
 ```
 
-### 3. 크롬에 확장 프로그램 설치
+### Backend Server
 
-1. 크롬 브라우저에서 `chrome://extensions/` 접속
-2. 우측 상단의 "개발자 모드" 활성화
-3. "압축해제된 확장 프로그램을 로드합니다" 클릭
-4. `build` 폴더 선택
+```bash
+# Start backend server
+npm run server
 
-## 🔧 설정 방법
-
-### AI 서비스 API 키 설정
-
-1. 확장 프로그램에서 "API 설정" 버튼 클릭
-2. 각 AI 서비스별로 API 키 입력 및 삭제(X) 가능
-
-#### Claude (Anthropic)
-- [Anthropic Console](https://console.anthropic.com/)에서 API 키 발급
-- `sk-ant-...` 형식의 키 입력
-
-#### GPT (OpenAI)
-- [OpenAI Platform](https://platform.openai.com/)에서 API 키 발급
-- `sk-...` 형식의 키 입력
-
-#### Groq
-- [Groq Console](https://console.groq.com/)에서 API 키 발급
-
-#### Perplexity
-- [Perplexity API](https://www.perplexity.ai/settings/api)에서 API 키 발급
-
-#### Gemini (Google)
-- [Google AI Studio](https://aistudio.google.com/)에서 API 키 발급
-
-## 🎯 사용 방법
-
-1. **AI 서비스 선택**: 사용하고 싶은 AI 서비스 선택
-2. **API 키 입력/삭제**: "API 설정"에서 해당 서비스의 API 키 입력 또는 삭제(X)
-3. **음성 녹음**: "음성 녹음 시작" 버튼으로 녹음 시작
-4. **AI 정리**: "AI 정리하기" 버튼으로 텍스트 요약
-5. **결과 복사**: 정리된 텍스트를 클립보드에 복사
-
-## 🔒 보안 및 개인정보 보호
-
-- **API 키는 브라우저 로컬에만 저장**되며, 서버로 전송/수집되지 않습니다.
-- 모든 API 호출은 HTTPS를 통해 암호화됩니다.
-- 사용자 인증 없이 바로 사용 가능
-- 하단 푸터에 법적 안내 및 개인정보 보호 문구 명시
-
-## 🚨 주의사항
-
-- 각 AI 서비스의 사용량 제한과 요금 정책을 확인하세요
-- API 키는 안전하게 보관하고 공유하지 마세요
-- 음성 인식 정확도는 환경과 발음에 따라 달라질 수 있습니다
-
-## 🤝 기여하기
-
-1. Fork the Project
-2. Create your Feature Branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your Changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the Branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
-
-## 📄 라이선스
-
-이 프로젝트는 MIT 라이선스 하에 배포됩니다. 자세한 내용은 `LICENSE` 파일을 참조하세요.
-
-## 📞 문의
-
-프로젝트에 대한 문의사항이 있으시면 이슈를 생성해주세요.
-Contact: junexi0828@gmail.com
-
-## 📬 Contact & Social
-
-- **Email**: [junexi0828@gmail.com](mailto:junexi0828@gmail.com)
-- **GitHub**: [junexi0828](https://github.com/junexi0828)
-- **Blog**: [junexi0828.log](https://velog.io/@junexi0828/)
-- **Homepage**: [https://eieconcierge.com/](https://eieconcierge.com/)
+# Server will run on http://localhost:3001
+```
 
 ---
 
-**개발자**: Juns
-**버전**: 1.0.0
-**최종 업데이트**: 2025년 7월
+## 📚 API Documentation
+
+### Core Endpoints
+
+#### Productivity Management
+
+```http
+GET    /api/timer-logs          # Get timer logs
+POST   /api/timer-logs          # Add timer log
+GET    /api/block-logs          # Get block logs
+POST   /api/block-logs          # Add block log
+POST   /api/sync-logs           # Sync local logs
+```
+
+#### Focus Mode
+
+```http
+GET    /api/block/status        # Get blocking status
+POST   /api/block/start         # Start blocking
+POST   /api/block/stop          # Stop blocking
+GET    /api/block/sites         # Get blocked sites
+```
+
+#### System Management
+
+```http
+GET    /api/status              # System status
+GET    /api/settings            # User settings
+POST   /api/settings/reset      # Reset settings
+```
+
+### Response Format
+
+```json
+{
+  "success": true,
+  "data": {},
+  "message": "Operation completed successfully",
+  "timestamp": "2025-08-07T08:00:00.000Z"
+}
+```
 
 ---
 
-> © 2025 Juns. 모든 권리 보유. | 이 서비스는 사용자의 API 키를 서버에 저장하지 않으며, 모든 데이터는 브라우저 로컬에만 저장됩니다. | 무단 복제 및 배포 금지
+## 🚀 Deployment
+
+### Web Application (Vercel)
+
+```bash
+# Build for production
+npm run build
+
+# Deploy to Vercel
+vercel --prod
+```
+
+### Chrome Extension
+
+```bash
+# Build extension
+npm run build:extension
+
+# Load in Chrome
+# 1. Open chrome://extensions/
+# 2. Enable Developer mode
+# 3. Load unpacked extension
+# 4. Select build folder
+```
+
+### Backend Server
+
+```bash
+# Production build
+npm run build:server
+
+# Start production server
+npm run start:prod
+```
+
+---
+
+## 🤝 Contributing
+
+We welcome contributions! Please see our [Contributing Guidelines](CONTRIBUTING.md) for details.
+
+### Development Workflow
+
+1. **Fork** the repository
+2. **Create** a feature branch (`git checkout -b feature/AmazingFeature`)
+3. **Commit** your changes (`git commit -m 'Add AmazingFeature'`)
+4. **Push** to the branch (`git push origin feature/AmazingFeature`)
+5. **Open** a Pull Request
+
+### Code Standards
+
+- Follow ESLint configuration
+- Use TypeScript for new features
+- Write comprehensive tests
+- Update documentation
+
+---
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+---
+
+## 📞 Contact & Support
+
+<div align="center">
+
+**EIE Concierge Team**
+
+[![Email](https://img.shields.io/badge/Email-junexi0828%40gmail.com-blue?style=flat-square&logo=gmail)](mailto:junexi0828@gmail.com)
+[![GitHub](https://img.shields.io/badge/GitHub-junexi0828-black?style=flat-square&logo=github)](https://github.com/junexi0828)
+[![Blog](https://img.shields.io/badge/Blog-Velog-20C997?style=flat-square&logo=velog)](https://velog.io/@junexi0828/)
+[![Website](https://img.shields.io/badge/Website-eieconcierge.com-FF6B6B?style=flat-square)](https://eieconcierge.com/)
+
+</div>
+
+---
+
+<div align="center">
+
+**Made with ❤️ by Juns**
+
+![Version](https://img.shields.io/badge/Version-2.0.0-blue?style=flat-square)
+![Last Updated](https://img.shields.io/badge/Last%20Updated-August%202025-green?style=flat-square)
+
+> © 2025 EIE Concierge. All rights reserved. | Privacy Policy | Terms of Service
+
+</div>
