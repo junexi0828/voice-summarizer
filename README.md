@@ -7,20 +7,20 @@
 ![Node.js](https://img.shields.io/badge/Node.js-18+-339933?style=for-the-badge&logo=node.js)
 ![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)
 
-</div>
 [![Deploy to Vercel](https://img.shields.io/badge/Deploy%20to-Vercel-black?style=for-the-badge&logo=vercel)](https://vercel.com)
 [![Chrome Extension](https://img.shields.io/badge/Chrome-Extension-yellow?style=for-the-badge&logo=google-chrome)](https://chrome.google.com/webstore)
 
-<div align="center">
-
 **AI 기반 생산성 도구로 더 나은 삶을 만들어가세요**
+
 **🌐 [https://eieconcierge.com/](https://eieconcierge.com/)**
 
 </div>
+
+<div align="center">
+
 ![MVP 이미지](./mvp_image.JPG)
-![MVP 이미지2](./mvp_image2.JPG)
-![MVP 이미지3](./mvp_image3.JPG)
-![MVP 이미지5](./mvp_image5.JPG)
+
+</div>
 
 ---
 
