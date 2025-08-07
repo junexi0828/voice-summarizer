@@ -128,6 +128,12 @@ let userSettings = {
   blockHistory: [],
   timerLogs: [],
   blockLogs: [],
+  workSessions: [],
+  productivityData: {
+    daily: {},
+    weekly: {},
+    monthly: {},
+  },
 };
 
 // ----- 유틸리티 함수들 -----
@@ -2013,6 +2019,236 @@ app.get("/", (req, res) => {
   });
 });
 
+// ----- 작업 세션 관리 API -----
+app.get("/api/work-sessions", (req, res) => {
+  try {
+    const { date } = req.query;
+    let sessions = userSettings.workSessions || [];
+
+    // 특정 날짜 필터링
+    if (date) {
+      sessions = sessions.filter((session) => session.date === date);
+    }
+
+    res.json({
+      success: true,
+      sessions,
+      total: sessions.length,
+    });
+  } catch (error) {
+    log("ERROR", `작업 세션 조회 실패: ${error.message}`);
+    res.status(500).json({
+      success: false,
+      error: error.message,
+    });
+  }
+});
+
+app.post("/api/work-sessions", (req, res) => {
+  try {
+    const { startTime, endTime, task, completed = false } = req.body;
+
+    if (!startTime || !endTime || !task) {
+      return res.status(400).json({
+        success: false,
+        error: "startTime, endTime, task가 필요합니다.",
+      });
+    }
+
+    const newSession = {
+      id: Date.now(),
+      date: new Date().toISOString().split("T")[0],
+      startTime,
+      endTime,
+      task,
+      completed,
+      timestamp: new Date().toISOString(),
+    };
+
+    // userSettings에 추가
+    if (!userSettings.workSessions) {
+      userSettings.workSessions = [];
+    }
+    userSettings.workSessions.push(newSession);
+
+    // 설정 저장
+    saveUserSettings();
+
+    log("INFO", `작업 세션 추가 완료: ${newSession.task}`);
+
+    res.json({
+      success: true,
+      message: "작업 세션이 저장되었습니다.",
+      session: newSession,
+    });
+  } catch (error) {
+    log("ERROR", `작업 세션 추가 실패: ${error.message}`);
+    res.status(500).json({
+      success: false,
+      error: error.message,
+    });
+  }
+});
+
+app.put("/api/work-sessions/:id", (req, res) => {
+  try {
+    const { id } = req.params;
+    const updates = req.body;
+
+    if (!userSettings.workSessions) {
+      userSettings.workSessions = [];
+    }
+
+    const sessionIndex = userSettings.workSessions.findIndex(
+      (session) => session.id === parseInt(id)
+    );
+
+    if (sessionIndex === -1) {
+      return res.status(404).json({
+        success: false,
+        error: "작업 세션을 찾을 수 없습니다.",
+      });
+    }
+
+    // 세션 업데이트
+    userSettings.workSessions[sessionIndex] = {
+      ...userSettings.workSessions[sessionIndex],
+      ...updates,
+    };
+
+    // 설정 저장
+    saveUserSettings();
+
+    log("INFO", `작업 세션 업데이트 완료: ID ${id}`);
+
+    res.json({
+      success: true,
+      message: "작업 세션이 업데이트되었습니다.",
+      session: userSettings.workSessions[sessionIndex],
+    });
+  } catch (error) {
+    log("ERROR", `작업 세션 업데이트 실패: ${error.message}`);
+    res.status(500).json({
+      success: false,
+      error: error.message,
+    });
+  }
+});
+
+app.delete("/api/work-sessions/:id", (req, res) => {
+  try {
+    const { id } = req.params;
+
+    if (!userSettings.workSessions) {
+      userSettings.workSessions = [];
+    }
+
+    const sessionIndex = userSettings.workSessions.findIndex(
+      (session) => session.id === parseInt(id)
+    );
+
+    if (sessionIndex === -1) {
+      return res.status(404).json({
+        success: false,
+        error: "작업 세션을 찾을 수 없습니다.",
+      });
+    }
+
+    // 세션 삭제
+    const deletedSession = userSettings.workSessions.splice(sessionIndex, 1)[0];
+
+    // 설정 저장
+    saveUserSettings();
+
+    log("INFO", `작업 세션 삭제 완료: ID ${id}`);
+
+    res.json({
+      success: true,
+      message: "작업 세션이 삭제되었습니다.",
+      session: deletedSession,
+    });
+  } catch (error) {
+    log("ERROR", `작업 세션 삭제 실패: ${error.message}`);
+    res.status(500).json({
+      success: false,
+      error: error.message,
+    });
+  }
+});
+
+// ----- 생산성 데이터 관리 API -----
+app.get("/api/productivity-data", (req, res) => {
+  try {
+    const { date } = req.query;
+    let productivityData = userSettings.productivityData || {
+      daily: {},
+      weekly: {},
+      monthly: {},
+    };
+
+    // 특정 날짜 필터링
+    if (date) {
+      const dailyData = productivityData.daily[date] || {};
+      res.json({
+        success: true,
+        data: dailyData,
+      });
+    } else {
+      res.json({
+        success: true,
+        data: productivityData,
+      });
+    }
+  } catch (error) {
+    log("ERROR", `생산성 데이터 조회 실패: ${error.message}`);
+    res.status(500).json({
+      success: false,
+      error: error.message,
+    });
+  }
+});
+
+app.post("/api/productivity-data", (req, res) => {
+  try {
+    const { date, data } = req.body;
+
+    if (!date || !data) {
+      return res.status(400).json({
+        success: false,
+        error: "date와 data가 필요합니다.",
+      });
+    }
+
+    // userSettings에 추가
+    if (!userSettings.productivityData) {
+      userSettings.productivityData = { daily: {}, weekly: {}, monthly: {} };
+    }
+
+    userSettings.productivityData.daily[date] = {
+      ...userSettings.productivityData.daily[date],
+      ...data,
+      lastUpdated: new Date().toISOString(),
+    };
+
+    // 설정 저장
+    saveUserSettings();
+
+    log("INFO", `생산성 데이터 저장 완료: ${date}`);
+
+    res.json({
+      success: true,
+      message: "생산성 데이터가 저장되었습니다.",
+      data: userSettings.productivityData.daily[date],
+    });
+  } catch (error) {
+    log("ERROR", `생산성 데이터 저장 실패: ${error.message}`);
+    res.status(500).json({
+      success: false,
+      error: error.message,
+    });
+  }
+});
+
 // 서버 시작
 app.listen(PORT, "127.0.0.1", () => {
   log("INFO", `차단 서버가 포트 ${PORT}에서 실행 중입니다.`);
@@ -2043,6 +2279,14 @@ app.listen(PORT, "127.0.0.1", () => {
   log("INFO", `- POST /api/block-logs - 차단 로그 저장`);
   log("INFO", `- GET  /api/block-logs - 차단 로그 조회`);
   log("INFO", `- POST /api/sync-logs - 로그 동기화`);
+  log("INFO", `작업 세션 관리 API:`);
+  log("INFO", `- GET  /api/work-sessions - 작업 세션 조회`);
+  log("INFO", `- POST /api/work-sessions - 작업 세션 추가`);
+  log("INFO", `- PUT  /api/work-sessions/:id - 작업 세션 수정`);
+  log("INFO", `- DELETE /api/work-sessions/:id - 작업 세션 삭제`);
+  log("INFO", `생산성 데이터 API:`);
+  log("INFO", `- GET  /api/productivity-data - 생산성 데이터 조회`);
+  log("INFO", `- POST /api/productivity-data - 생산성 데이터 저장`);
 });
 
 module.exports = app;

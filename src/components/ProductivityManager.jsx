@@ -38,6 +38,7 @@ const ProductivityManager = () => {
     updateWorkSession,
     deleteWorkSession,
     syncLogs,
+    syncWithServer,
     setCurrentDate,
     setAiAnalysis,
   } = useProductivity();
@@ -48,6 +49,11 @@ const ProductivityManager = () => {
   const getWeeklyData = () => {
     const today = new Date();
     const weekData = [];
+
+    // productivityData가 undefined인 경우 빈 배열 반환
+    if (!productivityData || !productivityData.daily) {
+      return Array(7).fill(0);
+    }
 
     for (let i = 6; i >= 0; i--) {
       const date = new Date(today);
@@ -66,6 +72,11 @@ const ProductivityManager = () => {
   };
 
   const getTimeDistribution = () => {
+    // productivityData가 undefined인 경우 기본값 반환
+    if (!productivityData || !productivityData.daily) {
+      return { work: 0, break: 0, block: 0 };
+    }
+
     const todayData = productivityData.daily[currentDate] || {
       workTime: 0,
       breakTime: 0,
@@ -88,10 +99,16 @@ const ProductivityManager = () => {
 
     // 실제 데이터 기반 AI 분석
     const analysisData = {
-      workSessions: workSessions.filter((s) => s.date === currentDate),
-      productivityData: productivityData.daily,
-      timerLogs: timerLogs.filter((log) => log.date === currentDate),
-      blockLogs: blockLogs.filter((log) => log.date === currentDate),
+      workSessions: workSessions
+        ? workSessions.filter((s) => s.date === currentDate)
+        : [],
+      productivityData: productivityData?.daily || {},
+      timerLogs: timerLogs
+        ? timerLogs.filter((log) => log.date === currentDate)
+        : [],
+      blockLogs: blockLogs
+        ? blockLogs.filter((log) => log.date === currentDate)
+        : [],
       todayStats,
     };
 
@@ -185,22 +202,32 @@ const ProductivityManager = () => {
 
   const renderOverview = () => (
     <div className="space-y-6">
-      {/* 날짜 선택기 */}
+      {/* 날짜 선택기 및 동기화 */}
       <div className="bg-white p-4 rounded-lg shadow-sm border">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Calendar className="text-blue-600" size={20} />
             <h3 className="text-lg font-semibold text-gray-800">날짜 선택</h3>
           </div>
-          <input
-            type="date"
-            value={currentDate}
-            onChange={(e) => {
-              // Context를 통해 날짜 변경
-              setCurrentDate(e.target.value);
-            }}
-            className="px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
+          <div className="flex items-center gap-2">
+            <button
+              onClick={syncWithServer}
+              className="flex items-center gap-1 px-3 py-2 bg-green-500 text-white text-sm rounded hover:bg-green-600 transition-colors"
+              title="서버와 데이터 동기화"
+            >
+              <Save size={16} />
+              동기화
+            </button>
+            <input
+              type="date"
+              value={currentDate}
+              onChange={(e) => {
+                // Context를 통해 날짜 변경
+                setCurrentDate(e.target.value);
+              }}
+              className="px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
         </div>
       </div>
 
@@ -282,8 +309,8 @@ const ProductivityManager = () => {
           </div>
 
           <div className="space-y-3 max-h-48 overflow-y-auto">
-            {timerLogs.filter((log) => log.date === currentDate).length ===
-            0 ? (
+            {!timerLogs ||
+            timerLogs.filter((log) => log.date === currentDate).length === 0 ? (
               <div className="text-center py-4 text-gray-500">
                 <Clock className="mx-auto mb-2" size={24} />
                 <p className="text-sm">오늘 타이머 실행 기록이 없습니다</p>
@@ -341,8 +368,8 @@ const ProductivityManager = () => {
           </div>
 
           <div className="space-y-3 max-h-48 overflow-y-auto">
-            {blockLogs.filter((log) => log.date === currentDate).length ===
-            0 ? (
+            {!blockLogs ||
+            blockLogs.filter((log) => log.date === currentDate).length === 0 ? (
               <div className="text-center py-4 text-gray-500">
                 <Shield className="mx-auto mb-2" size={24} />
                 <p className="text-sm">오늘 차단 실행 기록이 없습니다</p>
@@ -398,6 +425,20 @@ const ProductivityManager = () => {
   );
 
   const renderAnalytics = () => {
+    // productivityData가 undefined인 경우 기본값 사용
+    if (!productivityData) {
+      return (
+        <div className="space-y-6">
+          <div className="bg-white p-6 rounded-lg shadow-sm border">
+            <div className="text-center py-8 text-gray-500">
+              <BarChart3 className="mx-auto mb-2" size={32} />
+              <p>데이터를 불러오는 중입니다...</p>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
     const weeklyData = getWeeklyData();
     const timeDistribution = getTimeDistribution();
 
@@ -494,7 +535,7 @@ const ProductivityManager = () => {
               const date = new Date();
               date.setDate(date.getDate() - (29 - day));
               const dateStr = date.toISOString().split("T")[0];
-              const dayData = productivityData.daily[dateStr];
+              const dayData = productivityData?.daily?.[dateStr];
               const productivity = dayData ? dayData.productivity : 0;
 
               const colorClass =
@@ -525,9 +566,19 @@ const ProductivityManager = () => {
   };
 
   const renderWorkSessions = () => {
-    const todaySessions = workSessions.filter(
-      (session) => session.date === currentDate
-    );
+    // workSessions가 undefined인 경우 빈 배열 사용
+    const todaySessions = workSessions
+      ? workSessions.filter((session) => session.date === currentDate)
+      : [];
+
+    console.log("작업 세션 디버깅:", {
+      workSessions: workSessions?.length || 0,
+      currentDate,
+      todaySessions: todaySessions.length,
+      allSessions:
+        workSessions?.map((s) => ({ id: s.id, date: s.date, task: s.task })) ||
+        [],
+    });
 
     return (
       <div className="space-y-6">
@@ -561,7 +612,7 @@ const ProductivityManager = () => {
                   <div className="flex-1 grid grid-cols-4 gap-4">
                     <input
                       type="time"
-                      value={session.startTime}
+                      value={session.startTime || ""}
                       onChange={(e) =>
                         updateWorkSession(
                           session.id,
@@ -573,7 +624,7 @@ const ProductivityManager = () => {
                     />
                     <input
                       type="time"
-                      value={session.endTime}
+                      value={session.endTime || ""}
                       onChange={(e) =>
                         updateWorkSession(session.id, "endTime", e.target.value)
                       }
@@ -581,7 +632,7 @@ const ProductivityManager = () => {
                     />
                     <input
                       type="text"
-                      value={session.task}
+                      value={session.task || ""}
                       onChange={(e) =>
                         updateWorkSession(session.id, "task", e.target.value)
                       }

@@ -67,14 +67,31 @@ const APITest = () => {
     }
   };
 
-  const testAIAPI = async (serviceName, testUrl) => {
+  const testAIAPI = async (serviceName) => {
     try {
-      const response = await fetch(testUrl, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ test: true }),
-      });
-      return { success: true, status: response.status };
+      // 백엔드 서버를 통해 AI API 테스트
+      const response = await fetch(
+        `${API_BASE_URL}/api/ai/${serviceName.toLowerCase()}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            prompt: "Hello, this is a test message.",
+            apiKey: "test-key", // 실제 테스트에서는 유효한 API 키 필요
+          }),
+        }
+      );
+
+      if (response.status === 400) {
+        // API 키가 없어서 실패하는 것은 정상 (서버 연결은 성공)
+        return {
+          success: true,
+          status: response.status,
+          message: "서버 연결됨 (API 키 필요)",
+        };
+      }
+
+      return { success: response.ok, status: response.status };
     } catch (error) {
       return { success: false, error: error.message };
     }
@@ -88,34 +105,18 @@ const APITest = () => {
     console.log("백엔드 API 테스트 중...");
     results.backend = await testBackendAPI();
 
-    // AI API 테스트
+    // AI API 테스트 (백엔드 프록시 사용)
     console.log("AI API 테스트 중...");
-    results.claude = await testAIAPI(
-      "Claude",
-      "https://api.anthropic.com/v1/messages"
-    );
-    results.gpt = await testAIAPI(
-      "GPT",
-      "https://api.openai.com/v1/chat/completions"
-    );
-    results.groq = await testAIAPI(
-      "Groq",
-      "https://api.groq.com/openai/v1/chat/completions"
-    );
-    results.perplexity = await testAIAPI(
-      "Perplexity",
-      "https://api.perplexity.ai/chat/completions"
-    );
-    results.gemini = await testAIAPI(
-      "Gemini",
-      "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent"
-    );
+    results.claude = await testAIAPI("claude");
+    results.gpt = await testAIAPI("gpt");
+    results.groq = await testAIAPI("groq");
+    results.perplexity = await testAIAPI("perplexity");
+    results.gemini = await testAIAPI("gemini");
 
     setTestResults(results);
     setIsTesting(false);
   }, []);
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     runAllTests();
   }, []); // runAllTests 의존성 제거하여 무한 루프 방지
@@ -130,8 +131,9 @@ const APITest = () => {
     );
   };
 
-  const getStatusText = (success) => {
+  const getStatusText = (success, message) => {
     if (success === undefined) return "테스트 중...";
+    if (message) return message;
     return success ? "연결됨" : "연결 실패";
   };
 
@@ -200,7 +202,10 @@ const APITest = () => {
                   <div className="flex items-center gap-2">
                     {getStatusIcon(testResults[service]?.success)}
                     <span className="text-sm font-medium">
-                      {getStatusText(testResults[service]?.success)}
+                      {getStatusText(
+                        testResults[service]?.success,
+                        testResults[service]?.message
+                      )}
                     </span>
                   </div>
                 </div>
