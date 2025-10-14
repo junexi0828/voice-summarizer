@@ -804,8 +804,8 @@
           metricCards[3].textContent = `₩${year3Revenue},000,000`;
         }
 
-        // 시나리오 변경
-        function changeScenario(scenario) {
+        // 시나리오 변경 (전역 함수로 노출)
+        window.changeScenario = function (scenario) {
           currentScenario = scenario;
 
           // 버튼 활성화 상태 변경
@@ -851,10 +851,10 @@
 
           // 핵심 지표 업데이트
           updateKeyMetrics();
-        }
+        };
 
-        // CSV 내보내기
-        function exportToCSV() {
+        // CSV 내보내기 (전역 함수로 노출)
+        window.exportToCSV = function () {
           let csv =
             "월,활성 사용자,1단계 수익,B2B 수익,B2G 수익,총 수익,월간 지출,순이익,누적 현금\n";
 
@@ -891,7 +891,7 @@
           document.body.appendChild(link);
           link.click();
           document.body.removeChild(link);
-        }
+        };
 
         // 초기화
         populateMonthlyDataTable();
