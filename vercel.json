@@ -35,6 +35,14 @@
       "dest": "/robots.txt"
     },
     {
+      "src": "/data",
+      "dest": "/data/index.html"
+    },
+    {
+      "src": "/data/(.*)",
+      "dest": "/data/$1"
+    },
+    {
       "src": "/(.*)",
       "dest": "/index.html"
     }
