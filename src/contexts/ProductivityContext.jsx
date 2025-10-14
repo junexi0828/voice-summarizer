@@ -397,6 +397,7 @@ export const ProductivityProvider = ({ children }) => {
       payload: updatedProductivityData,
     });
     saveToLocalStorage("productivity_data", updatedProductivityData);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     state.workSessions,
     state.currentDate,
