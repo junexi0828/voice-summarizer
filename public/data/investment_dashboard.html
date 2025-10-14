@@ -1213,6 +1213,7 @@
                 data: revenueData.cumulative,
                 borderColor: "#1e3c72",
                 backgroundColor: function (context) {
+                  if (!context.parsed) return "rgba(52, 152, 219, 0.2)";
                   const value = context.parsed.y;
                   return value >= 0
                     ? "rgba(25, 135, 84, 0.2)"
