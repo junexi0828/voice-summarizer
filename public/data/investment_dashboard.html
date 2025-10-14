@@ -58,6 +58,22 @@
         gap: 8px;
       }
 
+      .back-button {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        color: white;
+        text-decoration: none;
+        font-size: 0.9em;
+        margin-bottom: 15px;
+        opacity: 0.9;
+        transition: opacity 0.2s;
+      }
+
+      .back-button:hover {
+        opacity: 1;
+      }
+
       .container {
         max-width: 1400px;
         margin: 0 auto;
@@ -477,6 +493,7 @@
   <body>
     <div class="dashboard-header">
       <div class="header-content">
+        <a href="/data" class="back-button">← 목록으로</a>
         <h1>📊 투자 인사이트 대시보드</h1>
         <p class="subtitle">
           올인원 동아리 관리 플랫폼 | 재무 분석 및 투자 전략
