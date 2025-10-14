@@ -481,8 +481,17 @@
         <p class="subtitle">
           올인원 동아리 관리 플랫폼 | 재무 분석 및 투자 전략
         </p>
-        <div style="background: rgba(255,255,255,0.15); padding: 12px 20px; border-radius: 8px; margin-top: 15px; font-size: 0.95em;">
-          ⚠️ 본 리포트의 모든 재무 데이터는 <strong>예상 시나리오 목표치</strong>입니다
+        <div
+          style="
+            background: rgba(255, 255, 255, 0.15);
+            padding: 12px 20px;
+            border-radius: 8px;
+            margin-top: 15px;
+            font-size: 0.95em;
+          "
+        >
+          ⚠️ 본 리포트의 모든 재무 데이터는
+          <strong>예상 시나리오 목표치</strong>입니다
         </div>
         <div class="header-meta">
           <div class="header-meta-item">
@@ -650,8 +659,18 @@
           <h2>📊 재무 성과 분석</h2>
           <span class="section-badge">FINANCIAL PROJECTIONS</span>
         </div>
-        <div style="background: #fff3cd; border-left: 4px solid #f39c12; padding: 15px; margin-bottom: 25px; border-radius: 5px;">
-          <strong>📈 예상 시나리오 목표치:</strong> 아래 차트들은 현실적인 시장 가정을 기반으로 한 재무 전망입니다. 실제 성과는 시장 상황, 경쟁 환경, 실행 능력에 따라 달라질 수 있습니다.
+        <div
+          style="
+            background: #fff3cd;
+            border-left: 4px solid #f39c12;
+            padding: 15px;
+            margin-bottom: 25px;
+            border-radius: 5px;
+          "
+        >
+          <strong>📈 예상 시나리오 목표치:</strong> 아래 차트들은 현실적인 시장
+          가정을 기반으로 한 재무 전망입니다. 실제 성과는 시장 상황, 경쟁 환경,
+          실행 능력에 따라 달라질 수 있습니다.
         </div>
 
         <div class="chart-grid">
@@ -990,361 +1009,364 @@
             다양한 요인에 따라 달라질 수 있으며, 본 문서는 투자 결정을 위한 참고
             자료로만 사용되어야 합니다.
           </p>
-           <p style="margin-top: 10px; font-size: 0.85em">
-             📧 Contact: juns (junexi0828@gmail.com)
-           </p>
+          <p style="margin-top: 10px; font-size: 0.85em">
+            📧 Contact: juns (junexi0828@gmail.com)
+          </p>
         </div>
       </div>
     </div>
 
     <script>
-      // 날짜 설정
-      document.getElementById("reportDate").textContent =
-        new Date().toLocaleDateString("ko-KR", {
-          year: "numeric",
-          month: "long",
-          day: "numeric",
-        });
+      // DOM이 완전히 로드된 후 실행
+      document.addEventListener("DOMContentLoaded", function () {
+        // 날짜 설정
+        document.getElementById("reportDate").textContent =
+          new Date().toLocaleDateString("ko-KR", {
+            year: "numeric",
+            month: "long",
+            day: "numeric",
+          });
 
-      // 데이터 계산 함수
-      function calculateRevenue(scenario = "base") {
-        const data = {
-          phase1: [],
-          b2b: [],
-          b2g: [],
-          total: [],
-          users: [],
-          expenses: [],
-          cumulative: [],
-        };
+        // 데이터 계산 함수
+        function calculateRevenue(scenario = "base") {
+          const data = {
+            phase1: [],
+            b2b: [],
+            b2g: [],
+            total: [],
+            users: [],
+            expenses: [],
+            cumulative: [],
+          };
 
-        const scenarioParams = {
-          conservative: {
-            userGrowth: 1.1,
-            maxUsers: 3000,
-            adRevenue: 2500,
-            b2bMultiplier: 0.7,
-            b2gMultiplier: 0.6,
-          },
-          base: {
-            userGrowth: 1.15,
-            maxUsers: 5000,
-            adRevenue: 3000,
-            b2bMultiplier: 1.0,
-            b2gMultiplier: 1.0,
-          },
-          optimistic: {
-            userGrowth: 1.2,
-            maxUsers: 7000,
-            adRevenue: 3500,
-            b2bMultiplier: 1.2,
-            b2gMultiplier: 1.15,
-          },
-        };
+          const scenarioParams = {
+            conservative: {
+              userGrowth: 1.1,
+              maxUsers: 3000,
+              adRevenue: 2500,
+              b2bMultiplier: 0.7,
+              b2gMultiplier: 0.6,
+            },
+            base: {
+              userGrowth: 1.15,
+              maxUsers: 5000,
+              adRevenue: 3000,
+              b2bMultiplier: 1.0,
+              b2gMultiplier: 1.0,
+            },
+            optimistic: {
+              userGrowth: 1.2,
+              maxUsers: 7000,
+              adRevenue: 3500,
+              b2bMultiplier: 1.2,
+              b2gMultiplier: 1.15,
+            },
+          };
 
-        const params = scenarioParams[scenario];
-        let cumulativeCash = -1064000;
+          const params = scenarioParams[scenario];
+          let cumulativeCash = -1064000;
 
-        for (let month = 1; month <= 36; month++) {
-          let phase1Revenue = 0;
-          let users = 0;
+          for (let month = 1; month <= 36; month++) {
+            let phase1Revenue = 0;
+            let users = 0;
 
-          if (month <= 12) {
-            users = Math.min(
-              100 * Math.pow(params.userGrowth, month - 1),
-              params.maxUsers
-            );
-            phase1Revenue = users * params.adRevenue;
-          } else {
-            users = params.maxUsers * 1.2;
+            if (month <= 12) {
+              users = Math.min(
+                100 * Math.pow(params.userGrowth, month - 1),
+                params.maxUsers
+              );
+              phase1Revenue = users * params.adRevenue;
+            } else {
+              users = params.maxUsers * 1.2;
+            }
+
+            let b2bRevenue = 0;
+            let b2gRevenue = 0;
+            if (month >= 13) {
+              const monthsFrom13 = month - 13;
+              b2bRevenue =
+                (50000000 / 12) *
+                params.b2bMultiplier *
+                Math.pow(1.1, monthsFrom13 / 12);
+              b2gRevenue =
+                (25000000 / 12) *
+                params.b2gMultiplier *
+                Math.pow(1.08, monthsFrom13 / 12);
+            }
+
+            const totalRevenue = phase1Revenue + b2bRevenue + b2gRevenue;
+            let monthlyExpense = 2218000;
+            if (month > 6) {
+              monthlyExpense *= 1 + 0.05 * Math.floor((month - 1) / 6);
+            }
+
+            cumulativeCash += totalRevenue - monthlyExpense;
+
+            data.phase1.push(phase1Revenue / 1000000);
+            data.b2b.push(b2bRevenue / 1000000);
+            data.b2g.push(b2gRevenue / 1000000);
+            data.total.push(totalRevenue / 1000000);
+            data.users.push(Math.round(users));
+            data.expenses.push(monthlyExpense / 1000000);
+            data.cumulative.push(cumulativeCash / 1000000);
           }
 
-          let b2bRevenue = 0;
-          let b2gRevenue = 0;
-          if (month >= 13) {
-            const monthsFrom13 = month - 13;
-            b2bRevenue =
-              (50000000 / 12) *
-              params.b2bMultiplier *
-              Math.pow(1.1, monthsFrom13 / 12);
-            b2gRevenue =
-              (25000000 / 12) *
-              params.b2gMultiplier *
-              Math.pow(1.08, monthsFrom13 / 12);
-          }
-
-          const totalRevenue = phase1Revenue + b2bRevenue + b2gRevenue;
-          let monthlyExpense = 2218000;
-          if (month > 6) {
-            monthlyExpense *= 1 + 0.05 * Math.floor((month - 1) / 6);
-          }
-
-          cumulativeCash += totalRevenue - monthlyExpense;
-
-          data.phase1.push(phase1Revenue / 1000000);
-          data.b2b.push(b2bRevenue / 1000000);
-          data.b2g.push(b2gRevenue / 1000000);
-          data.total.push(totalRevenue / 1000000);
-          data.users.push(Math.round(users));
-          data.expenses.push(monthlyExpense / 1000000);
-          data.cumulative.push(cumulativeCash / 1000000);
+          return data;
         }
 
-        return data;
-      }
+        const months = Array.from({ length: 36 }, (_, i) => `${i + 1}월`);
+        const revenueData = calculateRevenue("base");
 
-      const months = Array.from({ length: 36 }, (_, i) => `${i + 1}월`);
-      const revenueData = calculateRevenue("base");
+        // Executive Summary 업데이트
+        const breakEvenMonth = revenueData.cumulative.findIndex((v) => v >= 0);
+        const year3Cumulative = revenueData.cumulative[35];
+        const year3Monthly = revenueData.total[35];
+        const year3Annual = year3Monthly * 12;
+        const maxCashBurn = Math.min(...revenueData.cumulative);
+        const initialInvestment = 35; // million
+        const roi =
+          ((year3Cumulative - -initialInvestment) / initialInvestment) * 100;
 
-      // Executive Summary 업데이트
-      const breakEvenMonth = revenueData.cumulative.findIndex((v) => v >= 0);
-      const year3Cumulative = revenueData.cumulative[35];
-      const year3Monthly = revenueData.total[35];
-      const year3Annual = year3Monthly * 12;
-      const maxCashBurn = Math.min(...revenueData.cumulative);
-      const initialInvestment = 35; // million
-      const roi =
-        ((year3Cumulative - -initialInvestment) / initialInvestment) * 100;
+        document.getElementById("bepMonth").textContent =
+          breakEvenMonth > 0 ? `${breakEvenMonth + 1}개월` : "미달성";
+        document.getElementById(
+          "year3Cumulative"
+        ).textContent = `₩${year3Cumulative.toFixed(0)}M`;
+        document.getElementById(
+          "year3Annual"
+        ).textContent = `₩${year3Annual.toFixed(0)}M`;
+        document.getElementById("roiValue").textContent = `${roi.toFixed(0)}%`;
+        document.getElementById("maxCashBurn").textContent = `₩${Math.abs(
+          maxCashBurn
+        ).toFixed(0)}M`;
 
-      document.getElementById("bepMonth").textContent =
-        breakEvenMonth > 0 ? `${breakEvenMonth + 1}개월` : "미달성";
-      document.getElementById(
-        "year3Cumulative"
-      ).textContent = `₩${year3Cumulative.toFixed(0)}M`;
-      document.getElementById(
-        "year3Annual"
-      ).textContent = `₩${year3Annual.toFixed(0)}M`;
-      document.getElementById("roiValue").textContent = `${roi.toFixed(0)}%`;
-      document.getElementById("maxCashBurn").textContent = `₩${Math.abs(
-        maxCashBurn
-      ).toFixed(0)}M`;
+        // IRR 계산 (간단한 근사치)
+        const irr =
+          (Math.pow(
+            (year3Cumulative + initialInvestment) / initialInvestment,
+            1 / 3
+          ) -
+            1) *
+          100;
+        document.getElementById("irrValue").textContent = `${irr.toFixed(0)}%`;
 
-      // IRR 계산 (간단한 근사치)
-      const irr =
-        (Math.pow(
-          (year3Cumulative + initialInvestment) / initialInvestment,
-          1 / 3
-        ) -
-          1) *
-        100;
-      document.getElementById("irrValue").textContent = `${irr.toFixed(0)}%`;
-
-      // 차트 1: 월별 수익 추이
-      new Chart(document.getElementById("revenueChart"), {
-        type: "line",
-        data: {
-          labels: months,
-          datasets: [
-            {
-              label: "1단계 (광고)",
-              data: revenueData.phase1,
-              borderColor: "#3498db",
-              backgroundColor: "rgba(52, 152, 219, 0.1)",
-              fill: false,
-              tension: 0.4,
-            },
-            {
-              label: "B2B",
-              data: revenueData.b2b,
-              borderColor: "#2ecc71",
-              backgroundColor: "rgba(46, 204, 113, 0.1)",
-              fill: false,
-              tension: 0.4,
-            },
-            {
-              label: "B2G",
-              data: revenueData.b2g,
-              borderColor: "#e74c3c",
-              backgroundColor: "rgba(231, 76, 60, 0.1)",
-              fill: false,
-              tension: 0.4,
-            },
-          ],
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: {
-            legend: {
-              position: "bottom",
-            },
+        // 차트 1: 월별 수익 추이
+        new Chart(document.getElementById("revenueChart"), {
+          type: "line",
+          data: {
+            labels: months,
+            datasets: [
+              {
+                label: "1단계 (광고)",
+                data: revenueData.phase1,
+                borderColor: "#3498db",
+                backgroundColor: "rgba(52, 152, 219, 0.1)",
+                fill: false,
+                tension: 0.4,
+              },
+              {
+                label: "B2B",
+                data: revenueData.b2b,
+                borderColor: "#2ecc71",
+                backgroundColor: "rgba(46, 204, 113, 0.1)",
+                fill: false,
+                tension: 0.4,
+              },
+              {
+                label: "B2G",
+                data: revenueData.b2g,
+                borderColor: "#e74c3c",
+                backgroundColor: "rgba(231, 76, 60, 0.1)",
+                fill: false,
+                tension: 0.4,
+              },
+            ],
           },
-          scales: {
-            y: {
-              beginAtZero: true,
-              title: {
-                display: true,
-                text: "수익 (백만원)",
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: {
+                position: "bottom",
               },
             },
-          },
-        },
-      });
-
-      // 차트 2: 누적 현금 흐름
-      new Chart(document.getElementById("cashFlowChart"), {
-        type: "line",
-        data: {
-          labels: months,
-          datasets: [
-            {
-              label: "누적 현금",
-              data: revenueData.cumulative,
-              borderColor: "#1e3c72",
-              backgroundColor: function (context) {
-                const value = context.parsed.y;
-                return value >= 0
-                  ? "rgba(25, 135, 84, 0.2)"
-                  : "rgba(220, 53, 69, 0.2)";
-              },
-              fill: true,
-              borderWidth: 3,
-              tension: 0.4,
-            },
-          ],
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: {
-            legend: {
-              display: false,
-            },
-          },
-          scales: {
-            y: {
-              title: {
-                display: true,
-                text: "누적 현금 (백만원)",
-              },
-              grid: {
-                color: function (context) {
-                  if (context.tick.value === 0) {
-                    return "#dc3545";
-                  }
-                  return "rgba(0, 0, 0, 0.1)";
-                },
-                lineWidth: function (context) {
-                  if (context.tick.value === 0) {
-                    return 2;
-                  }
-                  return 1;
+            scales: {
+              y: {
+                beginAtZero: true,
+                title: {
+                  display: true,
+                  text: "수익 (백만원)",
                 },
               },
             },
           },
-        },
-      });
+        });
 
-      // 차트 3: 수익 구성 변화
-      new Chart(document.getElementById("revenueBreakdownChart"), {
-        type: "bar",
-        data: {
-          labels: ["6개월", "12개월", "18개월", "24개월", "30개월", "36개월"],
-          datasets: [
-            {
-              label: "1단계 (광고)",
-              data: [
-                revenueData.phase1[5],
-                revenueData.phase1[11],
-                revenueData.phase1[17],
-                revenueData.phase1[23],
-                revenueData.phase1[29],
-                revenueData.phase1[35],
-              ],
-              backgroundColor: "#3498db",
-            },
-            {
-              label: "B2B",
-              data: [
-                revenueData.b2b[5],
-                revenueData.b2b[11],
-                revenueData.b2b[17],
-                revenueData.b2b[23],
-                revenueData.b2b[29],
-                revenueData.b2b[35],
-              ],
-              backgroundColor: "#2ecc71",
-            },
-            {
-              label: "B2G",
-              data: [
-                revenueData.b2g[5],
-                revenueData.b2g[11],
-                revenueData.b2g[17],
-                revenueData.b2g[23],
-                revenueData.b2g[29],
-                revenueData.b2g[35],
-              ],
-              backgroundColor: "#e74c3c",
-            },
-          ],
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: {
-            legend: {
-              position: "bottom",
-            },
+        // 차트 2: 누적 현금 흐름
+        new Chart(document.getElementById("cashFlowChart"), {
+          type: "line",
+          data: {
+            labels: months,
+            datasets: [
+              {
+                label: "누적 현금",
+                data: revenueData.cumulative,
+                borderColor: "#1e3c72",
+                backgroundColor: function (context) {
+                  const value = context.parsed.y;
+                  return value >= 0
+                    ? "rgba(25, 135, 84, 0.2)"
+                    : "rgba(220, 53, 69, 0.2)";
+                },
+                fill: true,
+                borderWidth: 3,
+                tension: 0.4,
+              },
+            ],
           },
-          scales: {
-            x: {
-              stacked: true,
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: {
+                display: false,
+              },
             },
-            y: {
-              stacked: true,
-              beginAtZero: true,
-              title: {
-                display: true,
-                text: "수익 (백만원)",
+            scales: {
+              y: {
+                title: {
+                  display: true,
+                  text: "누적 현금 (백만원)",
+                },
+                grid: {
+                  color: function (context) {
+                    if (context.tick.value === 0) {
+                      return "#dc3545";
+                    }
+                    return "rgba(0, 0, 0, 0.1)";
+                  },
+                  lineWidth: function (context) {
+                    if (context.tick.value === 0) {
+                      return 2;
+                    }
+                    return 1;
+                  },
+                },
               },
             },
           },
-        },
-      });
+        });
 
-      // 차트 4: 사용자 성장 곡선
-      new Chart(document.getElementById("userGrowthChart"), {
-        type: "line",
-        data: {
-          labels: months,
-          datasets: [
-            {
-              label: "활성 사용자",
-              data: revenueData.users,
-              borderColor: "#667eea",
-              backgroundColor: "rgba(102, 126, 234, 0.1)",
-              fill: true,
-              tension: 0.4,
-              borderWidth: 3,
-            },
-          ],
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: {
-            legend: {
-              display: false,
-            },
+        // 차트 3: 수익 구성 변화
+        new Chart(document.getElementById("revenueBreakdownChart"), {
+          type: "bar",
+          data: {
+            labels: ["6개월", "12개월", "18개월", "24개월", "30개월", "36개월"],
+            datasets: [
+              {
+                label: "1단계 (광고)",
+                data: [
+                  revenueData.phase1[5],
+                  revenueData.phase1[11],
+                  revenueData.phase1[17],
+                  revenueData.phase1[23],
+                  revenueData.phase1[29],
+                  revenueData.phase1[35],
+                ],
+                backgroundColor: "#3498db",
+              },
+              {
+                label: "B2B",
+                data: [
+                  revenueData.b2b[5],
+                  revenueData.b2b[11],
+                  revenueData.b2b[17],
+                  revenueData.b2b[23],
+                  revenueData.b2b[29],
+                  revenueData.b2b[35],
+                ],
+                backgroundColor: "#2ecc71",
+              },
+              {
+                label: "B2G",
+                data: [
+                  revenueData.b2g[5],
+                  revenueData.b2g[11],
+                  revenueData.b2g[17],
+                  revenueData.b2g[23],
+                  revenueData.b2g[29],
+                  revenueData.b2g[35],
+                ],
+                backgroundColor: "#e74c3c",
+              },
+            ],
           },
-          scales: {
-            y: {
-              beginAtZero: true,
-              title: {
-                display: true,
-                text: "사용자 수",
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: {
+                position: "bottom",
+              },
+            },
+            scales: {
+              x: {
+                stacked: true,
+              },
+              y: {
+                stacked: true,
+                beginAtZero: true,
+                title: {
+                  display: true,
+                  text: "수익 (백만원)",
+                },
               },
             },
           },
-        },
-      });
+        });
 
-      // 인쇄 기능
-      window.addEventListener("beforeprint", () => {
-        document.body.style.background = "white";
-      });
+        // 차트 4: 사용자 성장 곡선
+        new Chart(document.getElementById("userGrowthChart"), {
+          type: "line",
+          data: {
+            labels: months,
+            datasets: [
+              {
+                label: "활성 사용자",
+                data: revenueData.users,
+                borderColor: "#667eea",
+                backgroundColor: "rgba(102, 126, 234, 0.1)",
+                fill: true,
+                tension: 0.4,
+                borderWidth: 3,
+              },
+            ],
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: {
+                display: false,
+              },
+            },
+            scales: {
+              y: {
+                beginAtZero: true,
+                title: {
+                  display: true,
+                  text: "사용자 수",
+                },
+              },
+            },
+          },
+        });
+
+        // 인쇄 기능
+        window.addEventListener("beforeprint", () => {
+          document.body.style.background = "white";
+        });
+      }); // DOMContentLoaded 종료
     </script>
   </body>
 </html>
