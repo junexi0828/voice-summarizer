@@ -811,8 +811,16 @@
           // 버튼 활성화 상태 변경
           document.querySelectorAll(".scenario-btn").forEach((btn) => {
             btn.classList.remove("active");
+            // 클릭된 시나리오에 해당하는 버튼 찾기
+            if (
+              (scenario === "conservative" &&
+                btn.textContent.includes("보수적")) ||
+              (scenario === "base" && btn.textContent.includes("기본")) ||
+              (scenario === "optimistic" && btn.textContent.includes("낙관적"))
+            ) {
+              btn.classList.add("active");
+            }
           });
-          event.target.classList.add("active");
 
           // 데이터 재계산
           revenueData = calculateRevenue(scenario);
