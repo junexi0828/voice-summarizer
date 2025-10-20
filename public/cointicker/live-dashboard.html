@@ -669,27 +669,50 @@
     </div>
 
     <script>
-      // 현실적인 데모 데이터
-      const markets = [
-        { symbol: "BTC/USDT", price: 43850.0, change: 2.35, volume: "28.5B" },
-        { symbol: "ETH/USDT", price: 2285.5, change: 1.82, volume: "15.2B" },
-        { symbol: "BNB/USDT", price: 315.2, change: -0.45, volume: "2.1B" },
-        { symbol: "SOL/USDT", price: 98.45, change: 5.67, volume: "3.8B" },
-        { symbol: "ADA/USDT", price: 0.485, change: -1.23, volume: "1.2B" },
-        { symbol: "XRP/USDT", price: 0.625, change: 3.14, volume: "2.5B" },
-        { symbol: "DOT/USDT", price: 6.82, change: 0.89, volume: "850M" },
-        { symbol: "DOGE/USDT", price: 0.0895, change: -2.15, volume: "1.5B" },
-      ];
+      // === 실시간 API 연동 시스템 ===
+
+      // 마켓 데이터 (API에서 실시간 업데이트)
+      let markets = [];
 
       const indicators = [
-        { name: "RSI(14)", value: "48.94", signal: "neutral", color: "#848e9c" },
+        {
+          name: "RSI(14)",
+          value: "48.94",
+          signal: "neutral",
+          color: "#848e9c",
+        },
         { name: "MACD", value: "-53.28", signal: "buy", color: "#0ecb81" },
-        { name: "ADX(14)", value: "19.20", signal: "neutral", color: "#848e9c" },
-        { name: "Williams %R", value: "-38.39", signal: "neutral", color: "#848e9c" },
-        { name: "CCI(14)", value: "-17.58", signal: "neutral", color: "#848e9c" },
+        {
+          name: "ADX(14)",
+          value: "19.20",
+          signal: "neutral",
+          color: "#848e9c",
+        },
+        {
+          name: "Williams %R",
+          value: "-38.39",
+          signal: "neutral",
+          color: "#848e9c",
+        },
+        {
+          name: "CCI(14)",
+          value: "-17.58",
+          signal: "neutral",
+          color: "#848e9c",
+        },
         { name: "ROC(12)", value: "0.92", signal: "buy", color: "#0ecb81" },
-        { name: "ATR(14)", value: "125.50", signal: "neutral", color: "#848e9c" },
-        { name: "Stoch RSI", value: "65.2", signal: "neutral", color: "#848e9c" },
+        {
+          name: "ATR(14)",
+          value: "125.50",
+          signal: "neutral",
+          color: "#848e9c",
+        },
+        {
+          name: "Stoch RSI",
+          value: "65.2",
+          signal: "neutral",
+          color: "#848e9c",
+        },
       ];
 
       const levels = [
@@ -722,44 +745,165 @@
         },
       ];
 
-      const news = [
-        {
-          source: "CoinDesk",
-          time: "5 min ago",
-          headline: "Bitcoin ETF sees $2B inflow in single day",
-          sentiment: "positive",
-        },
-        {
-          source: "Bloomberg",
-          time: "23 min ago",
-          headline: "SEC approves spot Bitcoin ETF applications",
-          sentiment: "positive",
-        },
-        {
-          source: "Reuters",
-          time: "1 hour ago",
-          headline: "Ethereum network completes major upgrade",
-          sentiment: "positive",
-        },
-        {
-          source: "Cointelegraph",
-          time: "2 hours ago",
-          headline: "Major exchange announces new security measures",
-          sentiment: "neutral",
-        },
-        {
-          source: "The Block",
-          time: "3 hours ago",
-          headline: "DeFi protocol suffers $10M exploit",
-          sentiment: "negative",
-        },
-        {
-          source: "Coinness",
-          time: "4 hours ago",
-          headline: "Institutional adoption reaches all-time high",
-          sentiment: "positive",
-        },
-      ];
+      // 뉴스 데이터 (API에서 실시간 업데이트)
+      let news = [];
+
+      let chartInstance = null;
+      let currentSymbol = "BTCUSDT";
+
+      // === 실시간 데이터 가져오기 함수들 ===
+
+      // 1. CoinGecko API - 실시간 가격 데이터
+      async function fetchCoinGeckoPrices() {
+        try {
+          const response = await fetch(
+            "https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=8&page=1&sparkline=false&price_change_percentage=24h"
+          );
+          const data = await response.json();
+
+          // CoinGecko 데이터를 우리 포맷으로 변환
+          markets = data.map((coin) => {
+            const symbolMap = {
+              bitcoin: "BTC/USDT",
+              ethereum: "ETH/USDT",
+              binancecoin: "BNB/USDT",
+              solana: "SOL/USDT",
+              cardano: "ADA/USDT",
+              ripple: "XRP/USDT",
+              polkadot: "DOT/USDT",
+              dogecoin: "DOGE/USDT",
+            };
+
+            return {
+              symbol: symbolMap[coin.id] || coin.symbol.toUpperCase() + "/USDT",
+              price: coin.current_price,
+              change: coin.price_change_percentage_24h || 0,
+              volume: formatVolume(coin.total_volume),
+            };
+          });
+
+          renderTickerBar();
+          renderMarketList();
+        } catch (error) {
+          console.error("CoinGecko API 에러:", error);
+        }
+      }
+
+      // 2. Binance API - 캔들스틱 차트 데이터
+      async function fetchBinanceKlines(
+        symbol = "BTCUSDT",
+        interval = "1h",
+        limit = 100
+      ) {
+        try {
+          const response = await fetch(
+            `https://api.binance.com/api/v3/klines?symbol=${symbol}&interval=${interval}&limit=${limit}`
+          );
+          const data = await response.json();
+
+          // Binance 캔들 데이터 파싱
+          const candleData = data.map((candle) => ({
+            x: new Date(candle[0]),
+            o: parseFloat(candle[1]),
+            h: parseFloat(candle[2]),
+            l: parseFloat(candle[3]),
+            c: parseFloat(candle[4]),
+          }));
+
+          updateChart(candleData);
+        } catch (error) {
+          console.error("Binance API 에러:", error);
+        }
+      }
+
+      // 3. Binance API - 24시간 가격 통계
+      async function fetchBinance24hrStats(symbol = "BTCUSDT") {
+        try {
+          const response = await fetch(
+            `https://api.binance.com/api/v3/ticker/24hr?symbol=${symbol}`
+          );
+          const data = await response.json();
+
+          // 현재 가격 정보 업데이트
+          document.getElementById("currentPrice").textContent =
+            "$" + parseFloat(data.lastPrice).toLocaleString();
+          document.getElementById("priceChange").textContent =
+            (data.priceChangePercent >= 0 ? "+" : "") +
+            parseFloat(data.priceChangePercent).toFixed(2) +
+            "%";
+          document.getElementById("priceChange").style.color =
+            data.priceChangePercent >= 0 ? "#0ecb81" : "#f6465d";
+        } catch (error) {
+          console.error("Binance 24hr 통계 에러:", error);
+        }
+      }
+
+      // 4. CryptoCompare API - 실시간 뉴스
+      async function fetchCryptoNews() {
+        try {
+          const response = await fetch(
+            "https://min-api.cryptocompare.com/data/v2/news/?lang=EN&categories=BTC,ETH"
+          );
+          const result = await response.json();
+
+          if (result.Data) {
+            news = result.Data.slice(0, 6).map((item) => {
+              const timeDiff = Math.floor(
+                (Date.now() / 1000 - item.published_on) / 60
+              );
+              const timeAgo =
+                timeDiff < 60
+                  ? `${timeDiff} min ago`
+                  : `${Math.floor(timeDiff / 60)} hours ago`;
+
+              // 간단한 감성 분석 (키워드 기반)
+              let sentiment = "neutral";
+              const title = item.title.toLowerCase();
+              if (
+                title.includes("surge") ||
+                title.includes("rise") ||
+                title.includes("bull") ||
+                title.includes("gain")
+              ) {
+                sentiment = "positive";
+              } else if (
+                title.includes("fall") ||
+                title.includes("drop") ||
+                title.includes("bear") ||
+                title.includes("crash")
+              ) {
+                sentiment = "negative";
+              }
+
+              return {
+                source: item.source_info.name,
+                time: timeAgo,
+                headline: item.title,
+                sentiment: sentiment,
+                url: item.url,
+              };
+            });
+
+            renderNews();
+          }
+        } catch (error) {
+          console.error("CryptoCompare 뉴스 에러:", error);
+        }
+      }
+
+      // 헬퍼 함수들
+      function formatVolume(volume) {
+        if (volume >= 1e9) return (volume / 1e9).toFixed(1) + "B";
+        if (volume >= 1e6) return (volume / 1e6).toFixed(0) + "M";
+        return volume.toLocaleString();
+      }
+
+      function updateChart(candleData) {
+        if (chartInstance) {
+          chartInstance.data.datasets[0].data = candleData;
+          chartInstance.update("none");
+        }
+      }
 
       // 티커 바 렌더링
       function renderTickerBar() {
@@ -788,7 +932,9 @@
           <div class="market-item ${i === 0 ? "active" : ""}">
             <div>
               <div class="market-symbol">${m.symbol}</div>
-              <div style="font-size: 0.8em; color: #848e9c;">Vol ${m.volume}</div>
+              <div style="font-size: 0.8em; color: #848e9c;">Vol ${
+                m.volume
+              }</div>
             </div>
             <div class="market-price">
               <div class="market-price-value">$${m.price.toLocaleString()}</div>
@@ -813,10 +959,12 @@
           <div class="indicator-row">
             <span class="indicator-name">${ind.name}</span>
             <div class="indicator-value-group">
-              <span class="indicator-value" style="color: ${ind.color}">${ind.value}</span>
-              <span class="indicator-signal ${ind.signal}">${
-              ind.signal.toUpperCase()
+              <span class="indicator-value" style="color: ${ind.color}">${
+              ind.value
             }</span>
+              <span class="indicator-signal ${
+                ind.signal
+              }">${ind.signal.toUpperCase()}</span>
             </div>
           </div>
         `
@@ -895,40 +1043,17 @@
           .join("");
       }
 
-      // Chart.js 캔들스틱 차트
+      // Chart.js 캔들스틱 차트 초기화
       function initChart() {
         const ctx = document.getElementById("priceChart").getContext("2d");
 
-        // 현실적인 캔들스틱 데이터 생성
-        const data = [];
-        let basePrice = 42000;
-        const now = new Date();
-
-        for (let i = 100; i >= 0; i--) {
-          const time = new Date(now.getTime() - i * 60 * 60 * 1000);
-          const open = basePrice + (Math.random() - 0.5) * 500;
-          const close = open + (Math.random() - 0.5) * 800;
-          const high = Math.max(open, close) + Math.random() * 400;
-          const low = Math.min(open, close) - Math.random() * 400;
-
-          data.push({
-            x: time,
-            o: open,
-            h: high,
-            l: low,
-            c: close,
-          });
-
-          basePrice = close;
-        }
-
-        new Chart(ctx, {
+        chartInstance = new Chart(ctx, {
           type: "candlestick",
           data: {
             datasets: [
               {
-                label: "BTC/USDT",
-                data: data,
+                label: currentSymbol,
+                data: [],
                 color: {
                   up: "#0ecb81",
                   down: "#f6465d",
@@ -976,30 +1101,50 @@
             },
           },
         });
+
+        // 초기 차트 데이터 로드
+        fetchBinanceKlines(currentSymbol);
       }
 
-      // 초기화
-      document.addEventListener("DOMContentLoaded", function () {
-        renderTickerBar();
-        renderMarketList();
+      // 초기화 및 실시간 데이터 로드
+      document.addEventListener("DOMContentLoaded", async function () {
+        console.log("🚀 CoinTicker Live Dashboard 시작 - 실시간 API 연동");
+
+        // 초기 렌더링
         renderIndicators();
         renderLevels();
         renderAlerts();
-        renderNews();
         initChart();
 
-        // 실시간 업데이트 시뮬레이션
+        // 초기 데이터 로드
+        await Promise.all([
+          fetchCoinGeckoPrices(),
+          fetchBinance24hrStats(currentSymbol),
+          fetchCryptoNews(),
+        ]);
+
+        // 실시간 업데이트 (30초마다)
+        setInterval(async () => {
+          console.log("🔄 실시간 데이터 업데이트 중...");
+          await fetchCoinGeckoPrices();
+          await fetchBinance24hrStats(currentSymbol);
+        }, 30000);
+
+        // 차트 데이터 업데이트 (1분마다)
         setInterval(() => {
-          // 가격 약간씩 변경
-          markets.forEach((m) => {
-            m.price += (Math.random() - 0.5) * 10;
-            m.change += (Math.random() - 0.5) * 0.1;
-          });
-          renderTickerBar();
-          renderMarketList();
-        }, 3000);
+          fetchBinanceKlines(currentSymbol);
+        }, 60000);
+
+        // 뉴스 업데이트 (5분마다)
+        setInterval(() => {
+          fetchCryptoNews();
+        }, 300000);
+
+        console.log("✅ 실시간 API 연동 완료!");
+        console.log("📊 CoinGecko: 가격 데이터");
+        console.log("📈 Binance: 캔들스틱 차트");
+        console.log("📰 CryptoCompare: 뉴스 피드");
       });
     </script>
   </body>
 </html>
-
